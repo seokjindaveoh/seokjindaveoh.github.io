@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neuromorphic · Seokjin Oh</title>
+<meta name="description" content="A 3D zoom from two people talking into a synapse, down to a memristor at 10 nm, and back out through a crossbar, tiles and a 2.5D package.">
+<link rel="canonical" href="https://seokjindaveoh.github.io/neuromorphic.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Neuromorphic · Seokjin Oh">
+<meta property="og:description" content="A 3D zoom from two people talking into a synapse, down to a memristor at 10 nm, and back out through a crossbar, tiles and a 2.5D package.">
+<meta property="og:url" content="https://seokjindaveoh.github.io/neuromorphic.html">
+<meta property="og:image" content="https://seokjindaveoh.github.io/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="theme-color" content="#500000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* white paper for people and biology, dark for silicon; JS moves these tokens along the scroll */
+  :root{--bg:#ffffff;--text:#1d1d1d;--mute:#7a6f6f;--acc:#500000}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Inter Tight",system-ui,sans-serif}
+  html,body{overflow:hidden}
+  #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #stage{position:fixed;inset:0;overflow:hidden}
+  canvas{display:block}
+  .hud{position:absolute;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+  .tl{left:28px;top:24px;z-index:4}
+  .tl a.home{color:var(--text);text-decoration:none}
+  .tl a.home:hover{color:var(--acc)}
+  .tl .sep{margin:0 10px}
+  .tl .cr{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--mute);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  #credits{position:absolute;left:28px;top:52px;z-index:5;max-width:460px;padding:14px 18px;background:var(--bg);color:var(--text);border:1px solid var(--mute);font-size:12px;line-height:1.55}
+  #credits p{margin:8px 0 0;color:var(--mute)}
+  #credits b{font-weight:600}
+  #crx{position:absolute;right:8px;top:4px;background:none;border:0;font-size:18px;color:var(--mute);cursor:pointer}
+  .tr{right:84px;top:20px;text-align:right}
+  .tr b{display:block;font:500 42px/1 "Cormorant Garamond",serif;letter-spacing:0;text-transform:none;color:var(--text);margin-top:6px}
+  /* the field-of-view scale is the control: one long line along the story, shrinking to 10 nm at the middle and growing again below */
+  #nav{position:absolute;right:30px;top:100px;bottom:46px;width:30px;touch-action:none;cursor:grab;z-index:3}
+  #nav:active{cursor:grabbing}
+  #nav::before{content:"";position:absolute;top:-12px;bottom:-12px;left:-6px;right:-10px}   /* a wider strip to grab than the thin line */
+  canvas{touch-action:pan-y}   /* vertical swipes scroll the page, sideways swipes change chapter */
+  #nav .rail{position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mute)}
+  #nav .sc{position:absolute;right:26px;transform:translateY(-50%);font-size:11px;letter-spacing:.06em;color:var(--mute);white-space:nowrap;pointer-events:none}
+  #nav .tk{position:absolute;left:11px;width:9px;height:1px;background:var(--mute);pointer-events:none}
+  #nav .st{position:absolute;left:15px;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;border:1px solid var(--mute);background:var(--bg);padding:0;cursor:pointer}
+  #nav .st.on{border-color:var(--acc)}
+  #mk{position:absolute;left:15px;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:var(--acc);pointer-events:none;box-shadow:0 0 0 5px rgba(127,127,127,.18)}
+  #navh{position:absolute;right:20px;bottom:16px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);transition:opacity .6s}
+  .tr{cursor:ns-resize;touch-action:none;user-select:none;z-index:3}
+  .cap{position:absolute;left:28px;bottom:26px;max-width:600px}
+  .cap .n{font:600 13px "Inter Tight";letter-spacing:.14em;color:var(--acc)}
+  .cap h2{font:500 46px/1.02 "Cormorant Garamond",serif;margin:6px 0 8px;color:var(--text)}
+  .cap p{font-size:13px;line-height:1.5;color:var(--mute);margin:0}
+  .lab{position:absolute;transform:translate(-50%,-100%);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);white-space:nowrap;pointer-events:none}
+  .lab i{display:block;width:1px;height:14px;margin:4px auto 0;background:currentColor;opacity:.6}
+  /* phones (portrait): smaller type, the scale keeps to the right edge with only 1 m · 10 nm · 1 m, captions stay clear of it */
+  @media (max-width: 640px) {
+    .tl{left:14px;top:14px;right:120px;font-size:10px;letter-spacing:.1em;line-height:1.6}
+    .tl .long{display:none}
+    .tr{right:14px;top:10px}
+    .tr b{font-size:28px;margin-top:2px}
+    #nav{right:18px;top:118px;bottom:30px}   /* away from the screen edge, where the browser takes swipes for back/forward */
+    #nav::before{left:-16px;right:-16px}
+    #nav .sc{font-size:10px;right:24px}
+    #nav .minor{display:none}
+    #nav .st::after{content:"";position:absolute;inset:-11px}
+    #navh{right:14px;bottom:auto;top:64px;font-size:9px}
+    .cap{left:14px;right:64px;bottom:16px;max-width:none}
+    .cap .n{font-size:11px}
+    .cap h2{font-size:28px;margin:4px 0 6px}
+    .cap p{font-size:11.5px;line-height:1.45}
+    .lab{font-size:9px;letter-spacing:.08em}
+    #credits{left:14px;right:14px;top:44px;max-width:none}
+  }
+  #navh .sw{display:none}
+  @media (pointer: coarse) { #navh .sw{display:inline} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="hud tl"><a class="home" href="index.html">← Seokjin Oh</a><span class="sep">·</span><span class="long">Neuromorphic · illustrative, not to scale<span class="sep">·</span></span><button class="cr" id="crb">Credits</button></div>
+  <div id="credits" hidden><button id="crx" aria-label="Close">×</button>
+  <b>Credits</b>
+  <p>Neuron shapes: NeuroMorpho.Org (RRID:SCR_002145), cells 142414 and 142354 (human cortex, layer 2/3, control group), from Warling A. et al. (2020), <i>J. Comp. Neurol.</i> 529(7):1308–1326, doi:10.1002/cne.25022. NeuroMorpho.Org: Tecuatl C., Ljungquist B., Ascoli G. A. (2024), <i>FASEB BioAdvances</i> 6(7):207–221, doi:10.1096/fba.2024-00048. Licensed CC BY 4.0.</p>
+  <p>Faces and figures: generated with Z-Image-Turbo and stippled. Rendering: three.js. Illustrative, not to scale.</p>
+</div>
+  <div class="hud tr">Field of view<b id="fov"></b></div>
+  <div id="nav" aria-label="Field of view: drag to zoom"><div class="rail"></div><div id="mk"></div></div>
+  <div id="navh">drag the scale ↕<span class="sw"> · swipe ← →</span></div>
+  <canvas id="ov"></canvas>
+  <div id="labels"></div>
+  <div class="cap"><div class="n" id="cn"></div><h2 id="ct"></h2><p id="cs"></p></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/people_points.js"></script>
+<script src="js/face_points.js"></script>
+<script src="js/neurons_swc.js"></script>
+<script>
+/* Neuromorphic page, the whole path in 3D: two people -> a brain of connections -> a neuron -> a synapse -> (same place) a memristor -> one crossbar -> tiles on CMOS -> a 2.5D package -> the second speaker's lattice brain -> two people.
+   Each level is built in its own units; the previous level sits exactly on one part of the next (anchor, scale r), so the camera
+   pulls back continuously. ?q=0..1 (and &t=seconds) renders one frame for video capture. */
+const Q = new URLSearchParams(location.search), CAP = Q.has('q') || Q.has('demo');
+// embedded in the homepage (iframe): the wheel scrolls the homepage, the homepage pauses us when off screen and darkens with us
+const EMBED = !!window.NM_EMBED || Q.has('embed');
+let RUN = true, sentDk = -1;
+if (EMBED) addEventListener('message', e => { if (e.data && e.data.nm === 'run') RUN = !!e.data.v; });
+let W = innerWidth, H = innerHeight;   // updated when the window is resized (see onResize)
+// scenes are framed for a wide screen; a narrower one pulls the camera back so the width still fits (a phone in portrait: about 2.5x)
+const fitOf = () => Math.pow(Math.max(1, 1.5 / (W / H)), .85), compact = () => W < 640;
+let FIT = fitOf();
+function rng(s) { return function () { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hash(a, b) { let h = Math.imul(a + 1, 374761393) ^ Math.imul(b + 7, 668265263); h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; }
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, ss = t => t * t * (3 - 2 * t);
+const seg = (p, a, b) => ss(clamp((p - a) / (b - a)));
+const frac = x => x - Math.floor(x);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(W, H);
+const PXR = renderer.getPixelRatio(), UPX = { value: H * PXR / 2 };   // one shared uniform: point sizes follow the window height
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+document.getElementById('stage').prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const DARK = new THREE.Color(0x05070b), WHITE = new THREE.Color(0xffffff);
+scene.background = WHITE.clone(); scene.fog = new THREE.FogExp2(0xffffff, 0);
+const camera = new THREE.PerspectiveCamera(30, W / H, .001, 500);
+const hemi = new THREE.HemisphereLight(0x9fb4d9, 0x07080b, .32); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, .95); key.position.set(10, 18, 8); scene.add(key);
+const rim = new THREE.DirectionalLight(0x6f8fd8, .6); rim.position.set(-14, 6, -12); scene.add(rim);
+
+const M4 = new THREE.Matrix4(), QI = new THREE.Quaternion(), V = new THREE.Vector3(), S3 = new THREE.Vector3(), COL = new THREE.Color();
+const BOX = new THREE.BoxGeometry(1, 1, 1), SPH = new THREE.SphereGeometry(1, 14, 10), CYL = new THREE.CylinderGeometry(1, 1, 1, 10);
+function inst(geo, mat, n, parent) { const m = new THREE.InstancedMesh(geo, mat, n); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; parent.add(m); return m; }
+function put(m, i, x, y, z, sx, sy, sz) { M4.compose(V.set(x, y, z), QI, S3.set(sx, sy, sz)); m.setMatrixAt(i, M4); }
+const glow = () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+const metal = () => new THREE.MeshStandardMaterial({ color: 0x6d7685, metalness: .85, roughness: .35 });
+const std = c => new THREE.MeshStandardMaterial({ color: c, metalness: .3, roughness: .65 });
+const dirty = (...ms) => ms.forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+const CIN = new THREE.Color(0x7fb2ff), COUT = new THREE.Color(0xb79bff), CB0 = new THREE.Color(0x0b1322), CB1 = new THREE.Color(0x24467f), CFL = new THREE.Color(0xbcd6ff);
+function polyAt(P, u) {
+  let L = 0; const ls = [];
+  for (let i = 1; i < P.length; i++) { const l = P[i].distanceTo(P[i - 1]); ls.push(l); L += l; }
+  let d = u * L;
+  for (let i = 1; i < P.length; i++) { if (d <= ls[i - 1]) return V.lerpVectors(P[i - 1], P[i], d / ls[i - 1]).clone(); d -= ls[i - 1]; }
+  return P[P.length - 1].clone();
+}
+function inputs(t, salt, n) { const e = Math.floor(t / 3), m = ss(clamp((t / 3 - e) * 3)); return [...Array(n)].map((_, i) => lerp(hash(i + salt, e - 1), hash(i + salt, e), m)); }
+const dotTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(.55, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+
+/* ===================== atoms: lit spheres drawn as points (the memristor) ===================== */
+// Opaque layers write depth so atoms hide each other like a solid; glow layers add light on top (vacancies, ions, electrons).
+const ATOM_VS = `
+uniform float uPx, uOp; attribute vec3 aCol; attribute float aSize, aAlpha, aRing; varying vec3 vC; varying float vA, vR;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0); float sc = length((modelViewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+  float px = aSize * projectionMatrix[1][1] * uPx * sc / max(1e-6, -mv.z);
+  gl_PointSize = max(1.0, px); vC = aCol; vR = aRing; vA = aAlpha * uOp * clamp(px / 1.5, 0.0, 1.0); gl_Position = projectionMatrix * mv;
+}`;
+const ATOM_FS = `
+uniform vec3 uAdd; uniform float uGlow; varying vec3 vC; varying float vA, vR;
+void main() {
+  vec2 p = (gl_PointCoord - 0.5) * 2.0; p.y = -p.y; float r2 = dot(p, p); if (r2 > 1.0 || vA < 0.004) discard;
+  vec3 c = vC + uAdd; float r = sqrt(r2);
+  if (vR > 0.5) { gl_FragColor = vec4(c, vA * (smoothstep(0.5, 0.68, r) * (1.0 - smoothstep(0.84, 1.0, r)) + 0.2 * (1.0 - r))); return; }   // a vacancy: an empty ring
+  if (uGlow > 0.5) { gl_FragColor = vec4(c, vA * pow(1.0 - r2, 1.5)); return; }
+  vec3 n = vec3(p, sqrt(1.0 - r2)), L = normalize(vec3(-0.45, 0.6, 0.66));
+  float dif = max(0.0, dot(n, L)), spec = pow(max(0.0, dot(reflect(-L, n), vec3(0.0, 0.0, 1.0))), 24.0);
+  gl_FragColor = vec4(c * (0.16 + 0.62 * dif) + 0.12 * spec, vA);
+}`;
+function atomLayer(n, parent, glowing = false) {
+  const g = new THREE.BufferGeometry(), A = k => new THREE.BufferAttribute(new Float32Array(n * k), k);
+  const pos = A(3), col = A(3), sz = A(1), al = A(1), rg = A(1);
+  g.setAttribute('position', pos); g.setAttribute('aCol', col); g.setAttribute('aSize', sz); g.setAttribute('aAlpha', al); g.setAttribute('aRing', rg);
+  const mat = new THREE.ShaderMaterial({ uniforms: { uPx: UPX, uOp: { value: 1 }, uAdd: { value: new THREE.Color(0, 0, 0) }, uGlow: { value: glowing ? 1 : 0 } },
+    vertexShader: ATOM_VS, fragmentShader: ATOM_FS, transparent: glowing, depthWrite: !glowing, depthTest: !glowing, blending: glowing ? THREE.AdditiveBlending : THREE.NormalBlending });
+  const P = new THREE.Points(g, mat); P.frustumCulled = false; P.renderOrder = glowing ? 6 : 1; P.onBeforeRender = () => { mat.uniforms.uOp.value = mat.opacity; }; parent.add(P);
+  let i = 0;
+  return {
+    mat, begin() { i = 0; },
+    add(x, y, z, c, size, a = 1, ring = 0) { if (i >= n) return; pos.setXYZ(i, x, y, z); col.setXYZ(i, c.r, c.g, c.b); sz.setX(i, size); al.setX(i, a); rg.setX(i, ring); i++; },
+    end() { for (let k = i; k < n; k++) al.setX(k, 0); [pos, col, sz, al, rg].forEach(b => b.needsUpdate = true); },
+  };
+}
+
+/* ===================== level: one memristor, atom by atom; four voltage pulses grow its filament (s = 0..4), then current flows ===================== */
+// Crystalline metal electrodes above and below an amorphous HfO2 layer; the front quarter is cut away to show the inside.
+// Each pulse pulls O atoms out of a cone above the bottom electrode: they drift up as O2- ions to the top electrode,
+// and the vacancies they leave behind line up into a conducting filament, bottom first.
+function buildMem() {
+  const g = new THREE.Group(), R = rng(31), cut = (x, z) => x > 1e-6 && z > 1e-6;
+  const C_TE = new THREE.Color(0x767b88), C_BE = new THREE.Color(0x6a6e7a), C_HF = new THREE.Color(0x3e4c78), C_OX = new THREE.Color(0x7088b4);
+  const C_ION = new THREE.Color(0x6fe0d6), C_VAC = new THREE.Color(0xbcd6ff), C_RES = new THREE.Color(0x3f8f8c), C_EL = new THREE.Color(0x7fb2ff).multiplyScalar(1.5);
+  // a block of lattice sites; vis = the site has a neighbour outside the block, so it can be seen
+  function block(y0, y1, a, jit, f) {
+    const nx = Math.round(1 / a), ny = Math.round((y1 - y0) / a), X = i => -.5 + i / nx, Y = j => y0 + (y1 - y0) * j / ny;
+    const inside = (i, j, k) => i >= 0 && i <= nx && k >= 0 && k <= nx && j >= 0 && j <= ny && !cut(X(i), X(k));
+    for (let i = 0; i <= nx; i++) for (let j = 0; j <= ny; j++) for (let k = 0; k <= nx; k++) {
+      if (!inside(i, j, k)) continue;
+      const vis = !inside(i + 1, j, k) || !inside(i - 1, j, k) || !inside(i, j + 1, k) || !inside(i, j - 1, k) || !inside(i, j, k + 1) || !inside(i, j, k - 1);
+      f(X(i) + (R() - .5) * jit, Y(j) + (R() - .5) * jit, X(k) + (R() - .5) * jit, vis, (i + j + k) % 3 === 0);
+    }
+  }
+  const ST = [], TEA = [], FO = [], rf = y => .055 + .05 * (.33 - y) / .66;   // filament cone: wide at the bottom electrode
+  block(.355, .56, .04, 0, (x, y, z, vis) => vis && TEA.push([x, y, z]));
+  block(-.56, -.355, .04, 0, (x, y, z, vis) => vis && ST.push([x, y, z, C_BE, .036]));
+  block(-.33, .33, .055, .016, (x, y, z, vis, hf) => {
+    if (!hf && Math.hypot(x, z) < rf(y)) { const h = clamp((y + .33) / .66) * 4, k = Math.min(3, Math.floor(h)); FO.push({ p: [x, y, z], vis, ts: k + .15 + .6 * Math.min(1, h - k) + (R() - .5) * .06, end: [x * .6 + (R() - .5) * .04, .305 + R() * .02, z * .6 + (R() - .5) * .04] }); }
+    else if (vis) ST.push([x, y, z, hf ? C_HF : C_OX, hf ? .05 : .034]);
+  });
+  const stat = atomLayer(ST.length, g); stat.begin(); ST.forEach(([x, y, z, c, s]) => stat.add(x, y, z, c, s)); stat.end();
+  const te = atomLayer(TEA.length, g); te.begin(); TEA.forEach(([x, y, z]) => te.add(x, y, z, C_TE, .036)); te.end();
+  const dyn = atomLayer(FO.length * 2, g), glw = atomLayer(FO.length * 5 + 60, g, true);
+  const hop = u => (Math.floor(u * 6) + ss(frac(u * 6))) / 6;   // ions hop site to site
+  const ionAt = (o, u) => { const q = hop(clamp(u)); return [lerp(o.p[0], o.end[0], q) + .012 * Math.sin(u * 40 + o.p[0] * 90), lerp(o.p[1], o.end[1], q), lerp(o.p[2], o.end[2], q) + .012 * Math.cos(u * 37 + o.p[2] * 80)]; };
+  return {
+    g, view: { t: [0, 0, 0], d: 4.4, az: .75, el: .42 }, hide() {}, s: 4,
+    labels: [['top electrode', [-.3, .6, -.3]], ['HfO₂ · amorphous oxide', [-.5, .18, .3]], ['oxygen vacancies → filament', [.16, -.02, .16]], ['bottom electrode', [.3, -.6, -.3]]],
+    update(tt) {
+      const s = this.s, k = Math.min(3, Math.floor(s)), ph = s >= 4 ? 1 : s - k, field = s >= 4 ? 0 : seg(ph, .04, .1) * (1 - seg(ph, .82, .9));
+      te.mat.uniforms.uAdd.value.copy(CIN).multiplyScalar(.22 * field);
+      dyn.begin(); glw.begin();
+      for (const o of FO) {
+        const u = (s - o.ts) / .45;
+        if (u < 0) { if (o.vis) dyn.add(...o.p, C_OX, .034); continue; }
+        glw.add(...o.p, C_VAC, .042, .5 * seg(u, 0, .3), 1);   // the empty site
+        if (u < 1) for (let j = 0; j < 4; j++) { const uu = u - j * .05; if (uu < 0) continue; glw.add(...ionAt(o, uu), C_ION, .036 * (1 - .18 * j), j ? .35 - .08 * j : 1); }
+        else dyn.add(...o.end, C_RES, .034);   // the oxygen now sits at the top electrode
+      }
+      const ne = s >= 4 ? 12 : 3 * Math.floor(s);   // more vacancies in line, more current
+      for (let c = 0; c < ne; c++) for (let j = 0; j < 3; j++) { const u = frac(tt * .5 + c / ne) - j * .02, a = 1.7 * c + tt * .3; if (u < 0) continue; glw.add(.025 * Math.cos(a), lerp(.34, -.34, u), .025 * Math.sin(a), C_EL, .03 * (1 - .25 * j), j ? .4 - .12 * j : .9); }
+      dyn.end(); glw.end();
+    },
+  };
+}
+
+/* ===================== level 1: one 8x8 crossbar doing a multiply-accumulate ===================== */
+function buildXbar() {
+  const g = new THREE.Group(), n = 8, X0 = -3.5, m = metal(), I0 = 3, J0 = 4;
+  const wl = inst(BOX, m, n, g), bl = inst(BOX, m, n, g);
+  for (let i = 0; i < n; i++) { put(wl, i, 0, 0, X0 + i, 9, .12, .16); put(bl, i, X0 + i, .5, 0, .16, .12, 9); }
+  const WG = []; { const r = rng(51); for (let k = 0; k < n * n; k++) WG.push(.12 + .88 * Math.pow(r(), 1.3)); }
+  const cell = inst(BOX, glow(), n * n, g);
+  const dac = inst(BOX, std(0x2c3d63), n, g), adc = inst(BOX, std(0x3b2f62), n, g), ib = inst(BOX, glow(), n, g), ob = inst(BOX, glow(), n, g);
+  for (let i = 0; i < n; i++) { put(dac, i, -5.3, 0, X0 + i, .6, .3, .6); put(adc, i, X0 + i, .5, 5.3, .6, .3, .6); }
+  const pin = inst(SPH, glow(), n * 2, g), pout = inst(SPH, glow(), n * 2, g);
+  let hidden = false;
+  return {
+    g, view: { t: [0, .2, .3], d: 19, az: .72, el: .55 }, anchor: [X0 + J0, .25, X0 + I0], r: .3,
+    hide(h) { hidden = h; },
+    labels: [['inputs · voltages on the rows', [-5.3, .4, -3.5]], ['weights · conductances', [3.5, .6, -3.5]], ['outputs · column currents (MAC)', [0, .7, 5.3]]],
+    update(tt, vis = 1) {
+      const v = inputs(tt, 0, n), act = new Float32Array(n * n), sum = new Array(n).fill(0);
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) sum[j] += v[i] * WG[i * n + j];
+      const smax = Math.max(...sum);
+      for (let i = 0; i < n; i++) {
+        put(ib, i, -5.3, .3 + .45 * v[i], X0 + i, .22 * vis, (.9 * v[i] + .01) * vis, .22 * vis); ib.setColorAt(i, COL.copy(CIN).multiplyScalar(.6 + 1.6 * v[i]));
+        for (let k = 0; k < 2; k++) {
+          const u = frac(tt * .28 + i * .05 + k / 2), x = lerp(-5, 4.5, u);
+          put(pin, i * 2 + k, x, 0, X0 + i, .1 * vis, .1 * vis, .1 * vis); pin.setColorAt(i * 2 + k, COL.copy(CIN).multiplyScalar(.3 + 2.6 * v[i]));
+          for (let j = 0; j < n; j++) act[i * n + j] += v[i] * Math.exp(-(((x - (X0 + j)) / .45) ** 2));
+        }
+      }
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const k = i * n + j, a = clamp(act[k] * WG[k] * 1.4);
+        put(cell, k, X0 + j, .25, X0 + i, ...(hidden && i === I0 && j === J0 ? [0, 0, 0] : [.3, .3, .3]));
+        cell.setColorAt(k, COL.copy(CB0).lerp(CB1, WG[k]).lerp(CFL, a).multiplyScalar((1 + 1.8 * a) * (.25 + .75 * vis)));
+      }
+      for (let j = 0; j < n; j++) {
+        const s = sum[j] / smax;
+        put(ob, j, X0 + j, .65 + .5 * s, 5.3, .22 * vis, (s + .01) * vis, .22 * vis); ob.setColorAt(j, COL.copy(COUT).multiplyScalar(.5 + 1.8 * s));
+        for (let k = 0; k < 2; k++) { const u = frac(tt * .28 + j * .05 + k / 2 + .3); put(pout, j * 2 + k, X0 + j, .5, lerp(-4.5, 5.1, u), .1 * vis, .1 * vis, .1 * vis); pout.setColorAt(j * 2 + k, COL.copy(COUT).multiplyScalar(.25 + 2.6 * s * s)); }
+      }
+      dirty(cell, ib, ob, pin, pout);
+    },
+  };
+}
+
+/* ===================== level 2: a CMOS die tiled with 4x4 compute tiles ===================== */
+// one tile = an 8x8 crossbar + its own DACs (left), ADCs (front) and neuron/router block (corner); tiles talk over routing channels
+function buildChipTop() {
+  const g = new THREE.Group(), n = 8, TP = .5, TC = [-9.75, -3.25, 3.25, 9.75], DS = 30, AT = 5;   // AT: the tile the single crossbar sits in
+  const die = new THREE.Mesh(new THREE.BoxGeometry(DS, 1.2, DS), new THREE.MeshStandardMaterial({ color: 0x141922, metalness: .55, roughness: .5 })); die.position.y = -.6; g.add(die);
+  const tiles = []; for (const tz of TC) for (const tx of TC) tiles.push([tx, tz]);
+  const kind = (x, z) => {
+    for (const [tx, tz] of tiles) {
+      if (x > tx - 3.1 && x < tx - 2.3 && Math.abs(z - tz) < 2.3) return 0x2c3d63;                 // DACs
+      if (z > tz + 2.3 && z < tz + 3.1 && Math.abs(x - tx) < 2.3) return 0x3b2f62;                 // ADCs
+      if (x > tx + 2.3 && x < tx + 3.1 && z > tz + 2.3 && z < tz + 3.1) return 0x4c1d26;            // neurons + router
+    }
+    return 0;
+  };
+  const NCM = 9800, cm = inst(BOX, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .35, roughness: .7 }), NCM, g);
+  { const r = rng(7); let c = 0; for (let z = -14.8; z < 14.9 && c < NCM; z += .3) { let x = -14.9; while (x < 14.7 && c < NCM) { const w = .1 + r() * .45, kc = kind(x + w / 2, z), h = kc ? .06 + r() * .2 : .03 + r() * .08; put(cm, c, x + w / 2, h / 2, z, w, h, .22); cm.setColorAt(c, COL.set(kc || 0x1c212b).multiplyScalar(.5 + r() * .35)); c++; x += w + .05; } } cm.count = c; }
+  // tile outlines on the CMOS surface
+  const fr = [];
+  for (const [tx, tz] of tiles) { const a = 3.2, y = .32; fr.push(new THREE.Vector3(tx - a, y, tz - a), new THREE.Vector3(tx + a, y, tz - a), new THREE.Vector3(tx + a, y, tz - a), new THREE.Vector3(tx + a, y, tz + a), new THREE.Vector3(tx + a, y, tz + a), new THREE.Vector3(tx - a, y, tz + a), new THREE.Vector3(tx - a, y, tz + a), new THREE.Vector3(tx - a, y, tz - a)); }
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(fr), new THREE.LineBasicMaterial({ color: 0x4a6aa8, transparent: true, opacity: .55 })));
+  // routing channels between tiles, routers at the crossings
+  const CH = [-6.5, 0, 6.5], chl = [];
+  for (const c of CH) { chl.push(new THREE.Vector3(-13.5, .14, c), new THREE.Vector3(13.5, .14, c), new THREE.Vector3(c, .14, -13.5), new THREE.Vector3(c, .14, 13.5)); }
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(chl), new THREE.LineBasicMaterial({ color: 0x2f6f7a, transparent: true, opacity: .7 })));
+  const rt = inst(BOX, std(0x4c1d26), 9, g); { let i = 0; for (const a of CH) for (const b of CH) put(rt, i++, a, .2, b, .7, .4, .7); }
+  const NPK = 36, pk = inst(SPH, glow(), NPK, g), CPK = new THREE.Color(0x8fe3ee);
+  const diel = new THREE.Mesh(new THREE.BoxGeometry(26.5, 1.9, 26.5), new THREE.MeshStandardMaterial({ color: 0x6f8fd8, transparent: true, opacity: .035, depthWrite: false })); diel.position.y = .95; g.add(diel);
+  const m = metal(), NT = tiles.length;
+  const wl = inst(BOX, m, NT * n, g), bl = inst(BOX, m, NT * n, g), cell = inst(BOX, glow(), NT * n * n, g);
+  const via = inst(CYL, new THREE.MeshStandardMaterial({ color: 0x4f5866, metalness: .85, roughness: .4 }), NT * n * 2, g);
+  const pin = inst(SPH, glow(), NT * n, g), pout = inst(SPH, glow(), NT * n, g);
+  const WG = []; { const r = rng(61); for (let k = 0; k < NT * n * n; k++) WG.push(.12 + .88 * Math.pow(r(), 1.3)); }
+  const UP = [], DN = [];
+  tiles.forEach(([tx, tz], t) => {
+    for (let i = 0; i < n; i++) {
+      const z = tz - 1.75 + i * TP, x = tx - 1.75 + i * TP;
+      put(via, t * n * 2 + i, tx - 2.5, 1.0, z, .035, 2.0, .035); put(via, t * n * 2 + n + i, x, 1.125, tz + 2.5, .035, 2.25, .035);
+      UP.push([new THREE.Vector3(tx - 3.0, .06, z), new THREE.Vector3(tx - 2.5, .06, z), new THREE.Vector3(tx - 2.5, 2.0, z), new THREE.Vector3(tx + 2.25, 2.0, z)]);
+      DN.push([new THREE.Vector3(x, 2.25, tz - 2.25), new THREE.Vector3(x, 2.25, tz + 2.5), new THREE.Vector3(x, .06, tz + 2.5), new THREE.Vector3(x, .06, tz + 3.0)]);
+    }
+  });
+  let hidden = false;
+  const [ax, az] = tiles[AT];
+  return {
+    g, view: { t: [0, .8, .8], d: 70, az: .72, el: .52 }, anchor: [ax, 2.0, az], r: .5,
+    hide(h) { hidden = h; },
+    labels: [['one tile = crossbar + DACs + ADCs + neurons', [ax, 2.8, az - 3.3]], ['routing between tiles', [6.5, .5, 12.5]], ['CMOS die', [-13, .4, -13]]],
+    update(tt, vis = 1) {
+      tiles.forEach(([tx, tz], t) => {
+        const hid = hidden && t === AT, sc = hid ? 0 : 1, v = inputs(tt + t * .7, t * 13, n), sum = new Array(n).fill(0), act = new Float32Array(n * n);
+        for (let i = 0; i < n; i++) {
+          put(wl, t * n + i, tx, 2.0, tz - 1.75 + i * TP, 4.5 * sc, .06 * sc, .08 * sc); put(bl, t * n + i, tx - 1.75 + i * TP, 2.25, tz, .08 * sc, .06 * sc, 4.5 * sc);
+          const u = frac(tt * .2 + i * .045 + t * .11), p = polyAt(UP[t * n + i], u);
+          put(pin, t * n + i, p.x, p.y, p.z, .09 * vis, .09 * vis, .09 * vis); pin.setColorAt(t * n + i, COL.copy(CIN).multiplyScalar(.3 + 2.4 * v[i]));
+          if (p.y > 1.9) for (let j = 0; j < n; j++) act[i * n + j] += v[i] * Math.exp(-(((p.x - (tx - 1.75 + j * TP)) / .3) ** 2));
+          for (let j = 0; j < n; j++) sum[j] += v[i] * WG[(t * n + i) * n + j];
+        }
+        const smax = Math.max(...sum);
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+          const k = (t * n + i) * n + j, a = clamp(act[i * n + j] * WG[k] * 1.4);
+          put(cell, k, tx - 1.75 + j * TP, 2.125, tz - 1.75 + i * TP, .15 * sc, .15 * sc, .15 * sc);
+          cell.setColorAt(k, COL.copy(CB0).lerp(CB1, WG[k]).lerp(CFL, a).multiplyScalar((1 + 1.8 * a) * (.25 + .75 * vis)));
+        }
+        for (let j = 0; j < n; j++) { const u = frac(tt * .2 + j * .05 + t * .13 + .3), p = polyAt(DN[t * n + j], u), s = sum[j] / smax; put(pout, t * n + j, p.x, p.y, p.z, .09 * vis, .09 * vis, .09 * vis); pout.setColorAt(t * n + j, COL.copy(COUT).multiplyScalar(.25 + 2.4 * s * s)); }
+      });
+      // spike packets hopping between tiles along the channels
+      for (let k = 0; k < NPK; k++) {
+        const line = k % 6, c = CH[line % 3], horiz = line < 3, u = frac(tt * .12 + k * .173), s = lerp(-13.5, 13.5, k % 2 ? u : 1 - u);
+        put(pk, k, horiz ? s : c, .2, horiz ? c : s, .16 * vis, .16 * vis, .16 * vis); pk.setColorAt(k, COL.copy(CPK).multiplyScalar(1.8 * Math.sin(Math.PI * u)));
+      }
+      dirty(wl, bl, cell, pin, pout, pk);
+    },
+    init() { cm.instanceColor.needsUpdate = true; },
+  };
+}
+
+/* ===================== level 3: 2.5D package, CoWoS-style: chiplets and memory stacks on a silicon interposer ===================== */
+// Surfaces carry drawn textures (die floorplans, DRAM banks, interposer wiring, substrate traces and build-up layers);
+// metal and silicon reflect a small studio environment.
+let PKG_ENV = null;
+function pkgEnv() {
+  if (PKG_ENV) return PKG_ENV;
+  const es = new THREE.Scene(); es.background = new THREE.Color(0x04060a);
+  const panel = (c, p, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })); m.position.set(...p); m.lookAt(0, 0, 0); es.add(m); };
+  panel(0xb8c8e8, [0, 12, 0], 12, 12); panel(0x5f7fc0, [-12, 5, 8], 10, 5); panel(0x8fa8d8, [12, 6, -6], 5, 12); panel(0x2a3a5a, [0, 3, -14], 20, 4);
+  const pm = new THREE.PMREMGenerator(renderer); PKG_ENV = pm.fromScene(es, .03).texture; pm.dispose(); return PKG_ENV;
+}
+function pkgTex(w, h, draw, rep) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...rep); }
+  return t;
+}
+const cLine = (x, a, b, c, d, st, lw = 1) => { x.strokeStyle = st; x.lineWidth = lw; x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+// the compute die from above, laid out like the chip-top level (4x4 tiles, routing channels, IO ring); glow = only what lights up
+function dieShot(glow) {
+  return pkgTex(1024, 1024, (x, W) => {
+    const S = W / 30, P = v => (v + 15) * S, r = rng(glow ? 92 : 91), TC = [-9.75, -3.25, 3.25, 9.75];
+    x.fillStyle = glow ? '#000' : '#0c111c'; x.fillRect(0, 0, W, W);
+    if (!glow) {
+      for (let i = 0; i < 14000; i++) { const v = 70 + r() * 70; x.fillStyle = `rgba(${v * .8 | 0},${v * .9 | 0},${v * 1.25 | 0},${.05 + r() * .12})`; x.fillRect(r() * W, r() * W, 2 + r() * 9, 1 + r() * 2.5); }   // standard cells
+      for (let i = 0; i < 60; i++) { const t = 18 + i * (W - 36) / 59; x.fillStyle = '#3b4659'; for (const [a, b] of [[t - 4, 6], [t - 4, W - 14], [6, t - 4], [W - 14, t - 4]]) x.fillRect(a, b, 8, 8); }   // IO pads
+    }
+    for (const c of [-6.5, 0, 6.5]) for (let k = -5; k <= 5; k++) { const o = k * 2.4, st = glow ? 'rgba(90,200,220,.35)' : 'rgba(60,140,160,.6)'; cLine(x, P(c) + o, P(-13.6), P(c) + o, P(13.6), st); cLine(x, P(-13.6), P(c) + o, P(13.6), P(c) + o, st); }   // routing channels
+    for (const tz of TC) for (const tx of TC) {
+      if (!glow) { x.strokeStyle = 'rgba(110,140,200,.6)'; x.lineWidth = 1.5; x.strokeRect(P(tx - 3.2), P(tz - 3.2), 6.4 * S, 6.4 * S); }
+      for (let i = 0; i < 8; i++) {   // the 8x8 crossbar: rows, columns and cells
+        const a = P(tx - 1.75 + i * .5);
+        if (!glow) { cLine(x, P(tx - 2.3), a, P(tx + 2.2), a, 'rgba(150,165,190,.75)', 1.4); cLine(x, a, P(tz - 2.3), a, P(tz + 2.2), 'rgba(150,165,190,.55)', 1.4); }
+        for (let j = 0; j < 8; j++) { const v = .12 + .88 * Math.pow(r(), 1.3); x.fillStyle = glow ? `rgb(${110 * v | 0},${160 * v | 0},${255 * v | 0})` : `rgb(${40 + 50 * v | 0},${60 + 80 * v | 0},${110 + 120 * v | 0})`; x.fillRect(P(tx - 1.75 + j * .5) - 4, P(tz - 1.75 + i * .5) - 4, 8, 8); }
+      }
+      if (!glow) {
+        for (let i = 0; i < 8; i++) { x.fillStyle = '#2c3d63'; x.fillRect(P(tx - 3.05), P(tz - 1.95 + i * .5), .7 * S, .38 * S); x.fillStyle = '#3b2f62'; x.fillRect(P(tx - 1.95 + i * .5), P(tz + 2.35), .38 * S, .7 * S); }   // DACs, ADCs
+        for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(${110 + r() * 60 | 0},${50 + r() * 30 | 0},${90 + r() * 60 | 0},.8)`; x.fillRect(P(tx + 2.35) + r() * .6 * S, P(tz + 2.35) + r() * .6 * S, 2 + r() * 6, 2 + r() * 6); }   // neurons + router
+      }
+    }
+  });
+}
+function buildPkg() {
+  const g = new THREE.Group(), YI = .72, YD = YI + .08, DT = 1.2 * 4.4 / 30, ENV = pkgEnv();      // interposer top, die bottom (after micro-bumps), die thickness
+  const mat = (o) => new THREE.MeshStandardMaterial(Object.assign({ envMap: ENV, envMapIntensity: .45 }, o));
+  const box = (w, h, d, mats, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats); m.position.set(x, y, z); g.add(m); return m; };
+  // package substrate: organic build-up layers around a core (seen on the edges), copper traces fanning out on top, BGA balls below
+  const subTop = pkgTex(1024, 1024, (x, W) => {
+    const r = rng(94), P = v => (v + 11) / 22 * W; x.fillStyle = '#0d1719'; x.fillRect(0, 0, W, W);
+    for (let i = 0; i < 5000; i++) { x.fillStyle = `rgba(90,120,120,${r() * .05})`; x.fillRect(r() * W, r() * W, 2, 2); }
+    for (let i = 0; i < 160; i++) {
+      const side = i % 4, t = (Math.floor(i / 4) + .5) / 40, st = 'rgba(170,140,95,.09)';
+      const [a, b] = side === 0 ? [P(-8.3 + 16.6 * t), P(-5.6)] : side === 1 ? [P(-8.3 + 16.6 * t), P(5.6)] : side === 2 ? [P(-8.4), P(-5.5 + 11 * t)] : [P(8.4), P(-5.5 + 11 * t)];
+      const [ex, ey] = side === 0 ? [P(-10.5 + 21 * t), P(-10.6)] : side === 1 ? [P(-10.5 + 21 * t), P(10.6)] : side === 2 ? [P(-10.6), P(-10.5 + 21 * t)] : [P(10.6), P(-10.5 + 21 * t)];
+      const mx = side < 2 ? ex : (a + ex) / 2, my = side < 2 ? (b + ey) / 2 : ey;
+      x.strokeStyle = st; x.lineWidth = 1; x.beginPath(); x.moveTo(a, b); x.lineTo(side < 2 ? a : mx, side < 2 ? my : b); x.lineTo(mx, my); x.lineTo(ex, ey); x.stroke();
+      x.fillStyle = 'rgba(190,160,110,.3)'; x.beginPath(); x.arc(ex, ey, 2.4, 0, 6.283); x.fill();
+    }
+    x.strokeStyle = 'rgba(170,140,95,.14)'; x.lineWidth = 3; x.strokeRect(P(-10.4), P(-10.4), P(10.4) - P(-10.4), P(10.4) - P(-10.4));
+  });
+  const subEdge = pkgTex(256, 80, (x, W, H) => {
+    let y = 0; const band = (h, c) => { x.fillStyle = c; x.fillRect(0, y, W, h); y += h; };
+    band(3, '#0b1214'); for (let k = 0; k < 4; k++) { band(2, '#7a6650'); band(5, '#16201f'); }
+    const y0 = y; band(18, '#1d2422'); const r = rng(95); for (let i = 0; i < 200; i++) { x.fillStyle = 'rgba(140,150,140,.25)'; x.fillRect(r() * W, y0 + r() * 18, 3, 1); }
+    for (let k = 0; k < 4; k++) { band(5, '#16201f'); band(2, '#7a6650'); } band(3, '#0b1214');
+  }, [10, 1]);
+  const sEdge = mat({ map: subEdge, metalness: .2, roughness: .6, envMapIntensity: .4 });
+  box(22, .6, 22, [sEdge, sEdge, mat({ map: subTop, metalness: .2, roughness: .6, envMapIntensity: .2 }), mat({ color: 0x0b1012 }), sEdge, sEdge], 0, 0, 0);
+  const balls = inst(new THREE.SphereGeometry(1, 10, 8), mat({ color: 0xb2b8c2, metalness: .95, roughness: .2 }), 22 * 22, g);
+  for (let a = 0; a < 22; a++) for (let b = 0; b < 22; b++) put(balls, a * 22 + b, -10 + a * .95, -.42, -10 + b * .95, .22, .22, .22);
+  // silicon interposer on C4 bumps: dense RDL wiring on top, TSVs on the cut edges
+  const ipTop = pkgTex(1536, 1030, (x, W, H) => {
+    const r = rng(96), PX = v => (v + 8.5) / 17 * W, PZ = v => (v + 5.7) / 11.4 * H;
+    x.fillStyle = '#121826'; x.fillRect(0, 0, W, H);
+    for (const v of [-2.83, 2.83]) cLine(x, PX(v), 0, PX(v), H, 'rgba(120,140,180,.12)', 2);   // reticle stitching
+    const lanes = (x0, z0, x1, z1, n, alongX) => { for (let k = 0; k < n; k++) { const o = -1.95 + 3.9 * (k + .5) / n, j = (r() - .5) * .25; if (alongX) { x.strokeStyle = 'rgba(125,155,215,.5)'; x.lineWidth = 1; x.beginPath(); x.moveTo(PX(x0), PZ(z0 + o)); x.lineTo(PX((x0 + x1) / 2 - .2), PZ(z0 + o)); x.lineTo(PX((x0 + x1) / 2 + .2), PZ(z0 + o + j)); x.lineTo(PX(x1), PZ(z0 + o + j)); x.stroke(); } else { x.strokeStyle = 'rgba(125,155,215,.5)'; x.lineWidth = 1; x.beginPath(); x.moveTo(PX(x0 + o), PZ(z0)); x.lineTo(PX(x0 + o), PZ((z0 + z1) / 2 - .2)); x.lineTo(PX(x0 + o + j), PZ((z0 + z1) / 2 + .2)); x.lineTo(PX(x0 + o + j), PZ(z1)); x.stroke(); } } };
+    for (const z of [-2.6, 2.6]) { lanes(-1.2, z, 1.2, z, 90, true); lanes(-5.9, z, -3.9, z, 70, true); lanes(3.9, z, 5.9, z, 70, true); }
+    for (const xx of [-2.6, 2.6]) lanes(xx, -1.2, xx, 1.2, 90, false);
+    for (let i = 0; i < 120; i++) { const t = (i + .5) / 120, xx = -8.2 + 16.4 * t; cLine(x, PX(xx), PZ(-5.0), PX(xx), PZ(-5.6), 'rgba(125,155,215,.35)'); cLine(x, PX(xx), PZ(5.0), PX(xx), PZ(5.6), 'rgba(125,155,215,.35)'); }   // fan-out to the C4 bumps
+    for (const [cx, cz, w, d] of [[-2.6, -2.6, 4.4, 4.4], [2.6, -2.6, 4.4, 4.4], [-2.6, 2.6, 4.4, 4.4], [2.6, 2.6, 4.4, 4.4], [-6.8, -2.6, 2.6, 3.8], [-6.8, 2.6, 2.6, 3.8], [6.8, -2.6, 2.6, 3.8], [6.8, 2.6, 2.6, 3.8]]) {
+      x.fillStyle = 'rgba(8,11,18,.85)'; x.fillRect(PX(cx - w / 2 - .06), PZ(cz - d / 2 - .06), PX(cx + w / 2 + .06) - PX(cx - w / 2 - .06), PZ(cz + d / 2 + .06) - PZ(cz - d / 2 - .06));   // footprints
+      x.fillStyle = 'rgba(175,185,205,.55)'; for (let s = -w / 2; s <= w / 2; s += .12) for (const e of [-d / 2 - .1, d / 2 + .1]) { x.fillRect(PX(cx + s) - 1, PZ(cz + e) - 1, 2, 2); }
+    }
+  });
+  const tsvEdge = pkgTex(512, 32, (x, W, H) => { x.fillStyle = '#1a2130'; x.fillRect(0, 0, W, H); for (let i = 2; i < W; i += 6) { x.fillStyle = '#8994a6'; x.fillRect(i, 4, 1.4, H - 8); } x.fillStyle = '#2b3446'; x.fillRect(0, 0, W, 3); }, [6, 1]);
+  const ipE = mat({ map: tsvEdge, metalness: .6, roughness: .35 });
+  box(17, .3, 11.4, [ipE, ipE, mat({ map: ipTop, metalness: .4, roughness: .42, envMapIntensity: .3 }), mat({ color: 0x141a26 }), ipE, ipE], 0, YI - .15, 0);
+  const bump = new THREE.SphereGeometry(1, 8, 6), c4 = inst(bump, mat({ color: 0xc0c6d0, metalness: .95, roughness: .2 }), 420, g);
+  { let i = 0; for (const o of [0, .3]) { for (let x = -8.1; x <= 8.11; x += .3) { put(c4, i++, x, .36, 5.45 - o, .08, .08, .08); put(c4, i++, x, .36, -5.45 + o, .08, .08, .08); } for (let z = -5.1; z <= 5.11; z += .3) { put(c4, i++, 8.25 - o, .36, z, .08, .08, .08); put(c4, i++, -8.25 + o, .36, z, .08, .08, .08); } } c4.count = i; }
+  // chiplets: 2x2 neuromorphic dies (the first one is the die we came from) and four HBM stacks
+  const DC = [[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]], HC = [[-6.8, -2.6], [-6.8, 2.6], [6.8, -2.6], [6.8, 2.6]];
+  const dieMap = dieShot(false), dieGlowMap = dieShot(true), sil = mat({ color: 0x1f2633, metalness: .5, roughness: .45, envMapIntensity: .3 });
+  const dieTops = DC.map(() => mat({ map: dieMap, emissiveMap: dieGlowMap, emissive: 0xffffff, emissiveIntensity: .7, metalness: .25, roughness: .55, envMapIntensity: .2 }));
+  const dies = DC.map(([x, z], d) => box(4.4, DT, 4.4, [sil, sil, dieTops[d], sil, sil, sil], x, YD + DT / 2, z));
+  const dram = pkgTex(512, 748, (x, W, H) => {
+    const r = rng(97); x.fillStyle = '#0e131d'; x.fillRect(0, 0, W, H);
+    for (let by = 0; by < 4; by++) for (let bx = 0; bx < 4; bx++) {
+      const x0 = 16 + bx * (W - 32) / 4, y0 = 16 + by * (H - 92) / 4 + (by > 1 ? 60 : 0), bw = (W - 32) / 4 - 10, bh = (H - 92) / 4 - 10;
+      x.fillStyle = '#18213a'; x.fillRect(x0, y0, bw, bh);
+      for (let s = 3; s < bh; s += 4) cLine(x, x0 + 2, y0 + s, x0 + bw - 2, y0 + s, `rgba(120,140,190,${.25 + r() * .2})`, 1);   // sub-arrays
+      cLine(x, x0 + bw / 2, y0, x0 + bw / 2, y0 + bh, 'rgba(160,170,200,.4)', 2);
+    }
+    const cy = H / 2; x.fillStyle = '#1b2232'; x.fillRect(12, cy - 14, W - 24, 28);
+    for (let i = 0; i < 70; i++) for (let j = 0; j < 3; j++) { x.fillStyle = 'rgba(190,200,220,.7)'; x.fillRect(18 + i * (W - 36) / 70, cy - 9 + j * 7, 3, 3); }   // the TSV spine
+  });
+  const coreTop = mat({ map: dram, metalness: .25, roughness: .55, envMapIntensity: .2 }), bond = mat({ color: 0x07090e, metalness: .1, roughness: .9 });
+  for (const [x, z] of HC) {
+    box(2.8, .1, 4.0, sil, x, YD + .05, z);   // base logic die
+    for (let l = 0; l < 8; l++) { const y = YD + .1 + l * .1; box(2.56, .025, 3.76, bond, x, y + .0125, z); box(2.6, .075, 3.8, l === 7 ? [sil, sil, coreTop, sil, sil, sil] : sil, x, y + .0625, z); }
+  }
+  // micro-bumps between every chiplet and the interposer (seen along the edges)
+  const mb = inst(bump, mat({ color: 0xd0d5dd, metalness: .95, roughness: .2 }), 2400, g);
+  { let i = 0; for (const [x, z, w, d] of [...DC.map(([x, z]) => [x, z, 4.4, 4.4]), ...HC.map(([x, z]) => [x, z, 2.8, 4.0])]) for (const o of [.08, .2]) {
+      for (let s = -w / 2 + .1; s <= w / 2 - .1 && i < 2398; s += .12) { put(mb, i++, x + s, YI + .04, z - d / 2 + o, .035, .035, .035); put(mb, i++, x + s, YI + .04, z + d / 2 - o, .035, .035, .035); }
+      for (let s = -d / 2 + .25; s <= d / 2 - .25 && i < 2398; s += .12) { put(mb, i++, x - w / 2 + o, YI + .04, z + s, .035, .035, .035); put(mb, i++, x + w / 2 - o, YI + .04, z + s, .035, .035, .035); }
+    } mb.count = i; }
+  // RDL lanes in 3D for the data packets
+  const LANES = [];
+  const lanes = (x0, z0, x1, z1, n, across) => { for (let k = 0; k < n; k++) { const o = -1.9 + 3.8 * (k + .5) / n; LANES.push(across === 'x' ? [new THREE.Vector3(x0, YI + .008, z0 + o), new THREE.Vector3(x1, YI + .008, z1 + o)] : [new THREE.Vector3(x0 + o, YI + .008, z0), new THREE.Vector3(x1 + o, YI + .008, z1)]); } };
+  for (const z of [-2.6, 2.6]) { lanes(-.6, z, .6, z, 28, 'x'); lanes(-5.4, z, -4.4, z, 22, 'x'); lanes(4.4, z, 5.4, z, 22, 'x'); }
+  for (const x of [-2.6, 2.6]) lanes(x, -.6, x, .6, 28, 'z');
+  const NPK = 90, pk = inst(SPH, glow(), NPK, g);
+  // activity: the crossbar of each tile lights up as it computes
+  const tileGlow = inst(BOX, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 4 * 16, g);
+  let hidden = false;
+  return {
+    g, view: { t: [0, .75, .4], d: 38, az: .78, el: .5 }, anchor: [DC[0][0], YD + DT, DC[0][1]], r: 4.4 / 30,
+    hide(h) { hidden = h; dies[0].visible = !h; },
+    labels: [['neuromorphic chiplets', [0, 1.4, -5.2]], ['HBM memory stacks', [6.8, 2.0, -4.8]], ['silicon interposer · 2.5D, CoWoS-style', [-6.2, .9, 5.9]], ['package substrate', [8.5, .4, 10.6]]],
+    update(tt, vis = 1) {
+      DC.forEach(([x, z], d) => {
+        dieTops[d].emissiveIntensity = .45 + .35 * (.5 + .5 * Math.sin(tt * 2.1 + d * 1.7));
+        for (let k = 0; k < 16; k++) { const a = k % 4, b = Math.floor(k / 4), e = Math.floor(tt * 1.5), f = frac(tt * 1.5), on = lerp(hash(d * 16 + k, e), hash(d * 16 + k, e + 1), ss(f)), sc = hidden && d === 0 ? 0 : vis;
+          put(tileGlow, d * 16 + k, x - 1.65 + a * 1.1, YD + DT + .004, z - 1.65 + b * 1.1, .55 * sc, .004, .55 * sc); tileGlow.setColorAt(d * 16 + k, COL.copy(CB1).lerp(CFL, on).multiplyScalar(.5 * Math.pow(on, 2))); }
+      });
+      for (let k = 0; k < NPK; k++) { const L = LANES[(k * 7) % LANES.length], u = frac(tt * .5 + k * .29), back = k % 2, p = V.lerpVectors(L[back ? 1 : 0], L[back ? 0 : 1], u); put(pk, k, p.x, p.y + .02, p.z, .04 * vis, .04 * vis, .04 * vis); pk.setColorAt(k, COL.copy(back ? COUT : CIN).multiplyScalar(2 * Math.sin(Math.PI * u))); }
+      dirty(pk, tileGlow);
+    },
+  };
+}
+
+/* ===================== level 4: two people; the second one's brain is a lattice of memristors ===================== */
+const W3 = (x, y) => [(x - 500) / 100, (562 - y) / 100];
+function inB(u, v) { return u * u + ((v - .08) / .72) ** 2 <= 1 || ((u - .5) / .36) ** 2 + ((v + .6) / .24) ** 2 <= 1 || (Math.abs(u - .22 - .35 * (v + .62)) < .075 && v < -.4 && v > -1.05); }
+function buildPeople() {
+  const g = new THREE.Group(), HA = PEOPLE.headA, HB = PEOPLE.headB, r = rng(81);
+  const [hax, hay] = W3(HA[0], HA[1]), [hbx, hby] = W3(HB[0], HB[1]), bsA = HA[2] * .78 / 100, bsB = HB[2] * .78 / 100;
+  // the two speakers, stippled
+  const pts = PEOPLE.pts, np = pts.length / 4, pos = new Float32Array(np * 3), col = new Float32Array(np * 3), AIDX = [];
+  for (let i = 0; i < np; i++) {
+    const [x, y] = W3(pts[i * 4] / 10, pts[i * 4 + 1] / 10), tn = pts[i * 4 + 2] / 9, who = pts[i * 4 + 3];
+    const hd = Math.hypot(x - (who ? hbx : hax), y - (who ? hby : hay)) < (who ? HB[2] : HA[2]) / 100 * 1.3;
+    pos.set([x, y, (r() - .5) * .04], i * 3);
+    const k = (hd ? .45 : 1) * (.45 + .5 * (1 - tn)); col.set([lerp(1, 80 / 255, k), lerp(1, 0, k), lerp(1, 0, k)], i * 3);
+    if (!who) AIDX.push([i, hd ? 1 : .85]);
+  }
+  const COL0 = col.slice();
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const people = new THREE.Points(pg, new THREE.PointsMaterial({ size: 2.6 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .4, vertexColors: true })); people.frustumCulled = false; g.add(people);
+  // A: a brain of cells (knowledge graph)
+  const BN = []; { const r2 = rng(3); for (let k = 0; k < 60000 && BN.length < 230; k++) { const u = r2() * 2.1 - 1.05, v = r2() * 1.9 - 1.05; if (inB(u, v) && BN.every(p => Math.hypot(u - p[0], v - p[1]) > .08)) BN.push([u, v]); } for (let i = 0; i < 110; i++) { const t = i / 110 * 6.2832, rr = 1 + .035 * Math.sin(7 * t); BN.push([rr * Math.cos(t), .08 + .72 * rr * Math.sin(t)]); } }
+  const gp = BN.map(([u, v]) => new THREE.Vector3(hax - bsA * u, hay + bsA * (v + .08), (r() - .5) * .08)), seg2 = [];
+  for (let i = 0; i < gp.length; i++) { const o = gp.map((p, j) => [p.distanceTo(gp[i]), j]).sort((a, b) => a[0] - b[0]); for (let m = 1; m <= 3; m++) seg2.push(gp[i], gp[o[m][1]]); }
+  const gEdges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg2), new THREE.LineBasicMaterial({ color: 0x500000, transparent: true, opacity: .45 })); g.add(gEdges);
+  const gNodes = new THREE.Points(new THREE.BufferGeometry().setFromPoints(gp), new THREE.PointsMaterial({ size: 3 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .4, color: 0x500000 })); gNodes.frustumCulled = false; g.add(gNodes);
+  // B: a brain of silicon (a regular 3D lattice of memristors), with the chip at its centre
+  const LP = [];
+  for (let u = -1.05; u <= 1.05; u += .115) for (let v = -1.05; v <= .85; v += .115) for (let w = -.75; w <= .75; w += .115) {
+    if (!inB(u, v) || Math.abs(w) > .75 * Math.sqrt(Math.max(0, 1 - u * u * .6))) continue;
+    const p = new THREE.Vector3(hbx + bsB * u, hby + bsB * (v + .08), w * bsB);
+    if (p.distanceTo(new THREE.Vector3(hbx, hby, 0)) < .085) continue;   // room for the chip
+    LP.push(p);
+  }
+  const lg = new THREE.BufferGeometry().setFromPoints(LP), lcol = new Float32Array(LP.length * 3); lg.setAttribute('color', new THREE.BufferAttribute(lcol, 3));
+  const lattice = new THREE.Points(lg, new THREE.PointsMaterial({ size: 3 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .3, vertexColors: true, toneMapped: false })); lattice.frustumCulled = false; g.add(lattice);
+  const chipSlot = new THREE.Mesh(new THREE.BoxGeometry(.2, .02, .2), new THREE.MeshStandardMaterial({ color: 0x1b2230, metalness: .6, roughness: .4 })); chipSlot.position.set(hbx, hby, 0); g.add(chipSlot);
+  const ground = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-3.2, 0, 0), new THREE.Vector3(3.2, 0, 0)]), new THREE.LineBasicMaterial({ color: 0x500000, transparent: true, opacity: .2 })); g.add(ground);
+  const MA = new THREE.Vector3(hax + HA[2] * .95 / 100, hay - HA[2] * .42 / 100, 0), MB = new THREE.Vector3(hbx - HB[2] * .95 / 100, hby - HB[2] * .42 / 100, 0);
+  const sp = new THREE.Points(new THREE.BufferGeometry().setFromPoints([...Array(41)].map(() => new THREE.Vector3())), new THREE.PointsMaterial({ size: 4 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .3, color: 0x500000, transparent: true })); sp.frustumCulled = false; g.add(sp);
+  const LC = new THREE.Color(), LDIM = new THREE.Color(0x1d3a6e), LBR = new THREE.Color(0x9cc4ff), LINK = new THREE.Color(0x1f4fa8);
+  return {
+    g, view: { t: [(hax + hbx) / 2, 2.3, 0], d: 10.5, az: 0, el: .12 }, anchor: [hbx, hby + .012, 0], r: .2 / 22,
+    hide(h) { chipSlot.visible = !h; },
+    HAX: [hax, hay, bsA], faceB: [hbx - HB[2] * .9 / 100, hby, 0], mode: 'end', fadeA: 0, _fa: -1,
+    get labels() { return this.mode === 'end' ? [['brain of cells', [hax, hay + .45, 0]], ['brain of silicon', [hbx, hby + .45, 0]]] : []; },
+    white: 0,
+    update(tt) {
+      const end = this.mode === 'end'; gEdges.visible = gNodes.visible = lattice.visible = end; if (!end) chipSlot.visible = false;
+      if (this._fa !== this.fadeA) { this._fa = this.fadeA; for (const [i, w] of AIDX) for (let c = 0; c < 3; c++) col[i * 3 + c] = lerp(COL0[i * 3 + c], 1, this.fadeA * w); pg.attributes.color.needsUpdate = true; }
+      const wht = this.white, dir = new THREE.Vector3(.8, .3, .5).normalize();
+      for (let i = 0; i < LP.length; i++) {
+        const ph = LP[i].dot(dir) * 18 - tt * 2.2, b = Math.pow(Math.max(0, Math.sin(ph)), 6) + .25 * hash(i, Math.floor(tt * 4)) ** 4;
+        LC.copy(LDIM).lerp(LBR, clamp(b)).multiplyScalar(1 + 1.6 * b);
+        LC.lerp(LINK.clone().lerp(new THREE.Color(0x0f2f6e), clamp(b)), wht);
+        lcol.set([LC.r, LC.g, LC.b], i * 3);
+      }
+      lg.attributes.color.needsUpdate = true;
+      const P = sp.geometry.attributes.position, dirn = Math.floor(tt * .25) % 2, from = dirn ? MB : MA, to = dirn ? MA : MB;
+      for (let i = 0; i <= 40; i++) { const s = i / 40, y = lerp(from.y, to.y, s) + .34 * Math.sin(Math.PI * s), wv = Math.max(0, Math.sin(6.2832 * (s * 2.2 - tt * .9))); P.setXYZ(i, lerp(from.x, to.x, s), wv > .3 ? y : -99, 0); }
+      P.needsUpdate = true; sp.material.opacity = wht * (end ? 1 : 1 - this.fadeA);
+    },
+  };
+}
+
+/* ===================== zoom-in levels (white paper) ===================== */
+// A's brain: a 3D knowledge graph inside the outline of a brain (no anatomy). Front faces +x (towards B).
+function buildBrain() {
+  const g = new THREE.Group(), r = rng(3), N = [];
+  for (let k = 0; k < 90000 && N.length < 420; k++) {
+    const u = r() * 2.1 - 1.05, v = r() * 1.9 - 1.05, w = r() * 1.6 - .8;
+    if (!inB(u, v) || Math.abs(w) > .72 * Math.sqrt(Math.max(0, 1 - u * u * .55))) continue;
+    const p = new THREE.Vector3(-u, v + .08, w * .85);
+    if (N.every(q => q.distanceTo(p) > .11)) N.push(p);
+  }
+  const E = [], ADJ = N.map(() => []), seen = new Set();
+  const add = (i, j) => { const a = Math.min(i, j), b = Math.max(i, j), k = a * 1000 + b; if (a === b || seen.has(k)) return; seen.add(k); E.push([a, b]); ADJ[a].push(b); ADJ[b].push(a); };
+  for (let i = 0; i < N.length; i++) { const o = N.map((p, j) => [p.distanceTo(N[i]), j]).sort((a, b) => a[0] - b[0]); for (let m = 1; m <= 3; m++) add(i, o[m][1]); }
+  for (let m = 0; m < 50; m++) { const i = Math.floor(r() * N.length), j = Math.floor(r() * N.length), d = N[i].distanceTo(N[j]); if (d > .4 && d < 1.0) add(i, j); }
+  const ink = new THREE.Color(0x500000);
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(E.flatMap(([a, b]) => [N[a], N[b]])), new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity: .32 })));
+  const nodes = new THREE.Points(new THREE.BufferGeometry().setFromPoints(N), new THREE.PointsMaterial({ size: 4.5 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .4, color: ink })); nodes.frustumCulled = false; g.add(nodes);
+  const PATHS = []; { const r2 = rng(9); for (let k = 0; k < 12; k++) { let i = Math.floor(r2() * N.length); const p = [i]; for (let s = 0; s < 20; s++) { i = ADJ[i][Math.floor(r2() * ADJ[i].length)]; p.push(i); } PATHS.push(p); } }
+  const hot = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([...Array(PATHS.length * 6)].map(() => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity: .95 })); hot.frustumCulled = false; g.add(hot);
+  const heads = new THREE.Points(new THREE.BufferGeometry().setFromPoints(PATHS.map(() => new THREE.Vector3())), new THREE.PointsMaterial({ size: 10 * PXR, sizeAttenuation: false, map: dotTex, alphaTest: .3, color: ink })); heads.frustumCulled = false; g.add(heads);
+  let TGT = 0; { let b = 9; N.forEach((p, i) => { const d = p.distanceTo(new THREE.Vector3(.05, .3, .1)); if (d < b) { b = d; TGT = i; } }); }
+  return {
+    g, view: { t: [0, .05, 0], d: 5.8, az: -.35, el: .12 }, hide() {},
+    labels: [['a brain made of connections', [0, 1.05, 0]]],
+    tgt: N[TGT],
+    io: { eye: [1.0, .25, .35], ear: [-.1, .05, .95], mouth: [1.05, -.62, .2], occ: [-.85, .1, 0], tmp: [-.05, -.35, .55], fro: [.7, -.15, .3] },
+    update(tt) {
+      const hp = hot.geometry.attributes.position, hd = heads.geometry.attributes.position;
+      PATHS.forEach((pth, k) => {
+        const L = pth.length - 1, pos = (tt * 2.2 + k * 1.7) % L, s = Math.floor(pos), f = pos - s;
+        for (let b = 0; b < 3; b++) { const e = Math.max(0, s - b), A = N[pth[e]], B = N[pth[e + 1]], u = b === 0 ? f : 1; hp.setXYZ((k * 3 + b) * 2, A.x, A.y, A.z); hp.setXYZ((k * 3 + b) * 2 + 1, lerp(A.x, B.x, u), lerp(A.y, B.y, u), lerp(A.z, B.z, u)); }
+        const A = N[pth[s]], B = N[pth[s + 1]]; hd.setXYZ(k, lerp(A.x, B.x, f), lerp(A.y, B.y, f), lerp(A.z, B.z, f));
+      });
+      hp.needsUpdate = true; hd.needsUpdate = true;
+    },
+  };
+}
+
+/* ===================== stipple engraving for the cells: dots on surfaces ===================== */
+// Every dot carries a random number. The shader keeps a dot while the screen density stays under a target, so a cell reads as a
+// dotted outline from afar and fills in as the camera comes close; shadow sides and silhouettes keep more dots, like an engraving.
+// aK: 0 dendrite (aS = path distance from the soma, inputs travel inwards), 1 soma, 2 axon (aS = arc length, spikes travel outwards)
+const STIP_VS = `
+uniform float uPx, uSize, uDens, uTone0, uRim, uT, uSoma, uDmax, uWave, uWw; uniform vec3 uL; uniform float uW[4];
+attribute float aRnd, aRho, aLin, aS, aK, aPh;
+varying float vA, vH;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vec3 n = normalize(normalMatrix * normal), v = normalize(-mv.xyz), L = normalize((viewMatrix * vec4(uL, 0.0)).xyz);
+  float tone = uTone0 + (1.0 - uTone0) * pow(1.0 - max(0.0, dot(n, L)), 1.5) + uRim * pow(1.0 - abs(dot(n, v)), 3.0);
+  float h = 0.0;
+  if (aK < 0.5) { float wc = uDmax * (1.0 - fract(uT * 0.2 + aPh)), d = (aS - wc) / 0.45; h = uWave * 0.6 * exp(-d * d) * step(0.5, fract(aPh * 7.31)); }
+  else if (aK < 1.5) h = uSoma;
+  else for (int i = 0; i < 4; i++) { float d = (aS - uW[i]) / uWw; h = max(h, exp(-d * d)); }
+  float sc = length((modelViewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz), ppl = projectionMatrix[1][1] * uPx * sc / max(1e-6, -mv.z);
+  float area = uDens * ppl * ppl / aRho;
+  float keep = max(min(1.0, area), min(1.0, 0.6 * ppl / aLin)) * min(1.0, tone);
+  keep = max(keep, h * min(1.0, 2.0 * area));
+  if (aRnd > keep) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+  vA = 0.5 + 0.5 * min(1.0, tone); vH = h;
+  gl_PointSize = uSize * (0.85 + 0.3 * min(1.0, tone)) * (1.0 + 0.8 * h);
+  gl_Position = projectionMatrix * mv;
+}`;
+const STIP_FS = `
+uniform vec3 uColor, uHot; uniform float uOp; varying float vA, vH;
+void main() { vec2 c = gl_PointCoord - 0.5; float d = dot(c, c); if (d > 0.25) discard; gl_FragColor = vec4(mix(uColor, uHot, vH), uOp * vA * (1.0 - smoothstep(0.15, 0.25, d))); }`;
+const LIGHT = new THREE.Vector3(-.45, .8, .4).normalize();
+function stipMat(color, o = {}) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(color) }, uHot: { value: new THREE.Color(o.hot ?? 0x1a0000) }, uOp: { value: 1 }, uPx: UPX,
+      uSize: { value: (o.size ?? 1.6) * PXR }, uDens: { value: o.dens ?? .1 }, uTone0: { value: o.tone0 ?? .22 }, uRim: { value: o.rim ?? 1.2 }, uL: { value: LIGHT },
+      uW: { value: [-99, -99, -99, -99] }, uWw: { value: .35 }, uT: { value: 0 }, uSoma: { value: 0 }, uDmax: { value: 10 }, uWave: { value: 0 } },
+    vertexShader: STIP_VS, fragmentShader: STIP_FS, transparent: true, depthWrite: false,
+  });
+  m.userData.k = o.op ?? 1; return m;
+}
+const stipBuf = () => ({ p: [], n: [], a: [] });
+function sAdd(B, R, x, y, z, nx, ny, nz, rho, lin, s, k, ph) { B.p.push(x, y, z); B.n.push(nx, ny, nz); B.a.push(R(), rho, lin, s, k, ph); }
+function stipPoints(B, mat) {
+  const g = new THREE.BufferGeometry(), A = B.a, N = A.length / 6;
+  g.setAttribute('position', new THREE.Float32BufferAttribute(B.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(B.n, 3));
+  ['aRnd', 'aRho', 'aLin', 'aS', 'aK', 'aPh'].forEach((nm, j) => { const f = new Float32Array(N); for (let i = 0; i < N; i++) f[i] = A[i * 6 + j]; g.setAttribute(nm, new THREE.BufferAttribute(f, 1)); });
+  const P = new THREE.Points(g, mat); P.frustumCulled = false; P.renderOrder = 2;
+  P.onBeforeRender = () => { mat.uniforms.uOp.value = mat.opacity * mat.userData.k; };
+  return P;
+}
+const gauss = R => Math.sqrt(-2 * Math.log(R() + 1e-9)) * Math.cos(6.2832 * R());
+const _u = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3();
+function frameOf(d) { _u.set(0, 1, 0); if (Math.abs(d.y) > .9) _u.set(1, 0, 0); _u.cross(d).normalize(); _w.copy(d).cross(_u); }
+// a tapered tube from a (radius ra) to b (radius rb)
+function sTube(B, R, a, b, ra, rb, rho, s0, s1, k, ph) {
+  _d.subVectors(b, a); const L = _d.length(); if (L < 1e-5) return; _d.divideScalar(L); frameOf(_d);
+  const n = Math.floor(Math.PI * (ra + rb) * L * rho + R());
+  for (let i = 0; i < n; i++) {
+    const t = R(), th = R() * 6.2832, c = Math.cos(th), sn = Math.sin(th), rr = lerp(ra, rb, t);
+    const nx = _u.x * c + _w.x * sn, ny = _u.y * c + _w.y * sn, nz = _u.z * c + _w.z * sn;
+    sAdd(B, R, a.x + _d.x * L * t + nx * rr, a.y + _d.y * L * t + ny * rr, a.z + _d.z * L * t + nz * rr, nx, ny, nz, rho, rho * 6.2832 * rr, lerp(s0, s1, t), k, ph);
+  }
+}
+// spines: short necks with round heads along a dendrite (only kept when the camera is close)
+function sSpines(B, R, a, b, ra, rb, rho, s0, s1, ph, every) {
+  _d.subVectors(b, a); const L = _d.length(); if (L < 1e-5) return; _d.divideScalar(L); frameOf(_d);
+  const n = Math.floor(L / every + R());
+  for (let i = 0; i < n; i++) {
+    const t = R(), th = R() * 6.2832, c = Math.cos(th), sn = Math.sin(th), rr = lerp(ra, rb, t), s = lerp(s0, s1, t);
+    const nx = _u.x * c + _w.x * sn, ny = _u.y * c + _w.y * sn, nz = _u.z * c + _w.z * sn;
+    const bx = a.x + _d.x * L * t + nx * rr, by = a.y + _d.y * L * t + ny * rr, bz = a.z + _d.z * L * t + nz * rr, len = .035 + .03 * R(), hr = .014 + .008 * R();
+    for (let j = 0; j < 3; j++) { const q = (j + .5) / 3 * len; sAdd(B, R, bx + nx * q, by + ny * q, bz + nz * q, nx, ny, nz, rho * 1.5, 1e9, s, 0, ph); }
+    for (let j = 0; j < 7; j++) { let ex = gauss(R), ey = gauss(R), ez = gauss(R); const l = Math.hypot(ex, ey, ez) || 1; ex /= l; ey /= l; ez /= l; sAdd(B, R, bx + nx * (len + hr) + ex * hr, by + ny * (len + hr) + ey * hr, bz + nz * (len + hr) + ez * hr, ex, ey, ez, rho * 1.5, 1e9, s, 0, ph); }
+  }
+}
+// an ellipsoid; xmax / xmin clip it flat on one side (a bouton's active zone, a spine head's face); pyr = pyramidal cell body
+function sBlob(B, R, c, rx, ry, rz, rho, o = {}) {
+  const area = 4 * Math.PI * Math.pow((Math.pow(rx * ry, 1.6) + Math.pow(rx * rz, 1.6) + Math.pow(ry * rz, 1.6)) / 3, 1 / 1.6);
+  const n = Math.floor(area * rho * (o.pyr ? 1.6 : 1) + R()), lin = rho * 6.2832 * (rx + ry + rz) / 3;
+  for (let i = 0; i < n; i++) {
+    let x = gauss(R), y = gauss(R), z = gauss(R); const l = Math.hypot(x, y, z) || 1; x /= l; y /= l; z /= l;
+    let ex = rx, ey = ry, ez = rz;
+    if (o.pyr && y > 0) { ey *= 1 + 1.5 * y ** 4; ex *= 1 - .4 * y ** 2; ez *= 1 - .4 * y ** 2; }
+    let px = c[0] + ex * x, py = c[1] + ey * y, pz = c[2] + ez * z, nx = x / ex, ny = y / ey, nz = z / ez;
+    if (o.xmax !== undefined && px > o.xmax) { px = o.xmax; nx = 1; ny = nz = 0; }
+    if (o.xmin !== undefined && px < o.xmin) { px = o.xmin; nx = -1; ny = nz = 0; }
+    const nl = Math.hypot(nx, ny, nz);
+    sAdd(B, R, px, py, pz, nx / nl, ny / nl, nz / nl, rho, lin, o.s ?? 0, o.k ?? 1, 0);
+  }
+}
+const OCC = () => new THREE.MeshBasicMaterial({ colorWrite: false });   // writes depth only: hides the dots on the far side of a solid cell
+
+/* ===================== level: neurons from real reconstructions (NeuroMorpho.Org), stippled ===================== */
+// units: 1 = 20 µm. The cell body sits at the origin, its axon runs to a bouton at SYN where the synapse level sits (scale RSYN).
+// The next neuron is placed so one of its dendrites passes the bouton; a spine reaches from it to the bouton.
+const SYN = [15.3, 0, 0], RSYN = .06, SHAFT = { pts: [], r: 1.4 };   // SHAFT: the next cell's dendrite at the contact, in synapse units
+function buildNeuron() {
+  const g = new THREE.Group(), R = rng(21), C = new THREE.Vector3(...SYN), UPV = new THREE.Vector3(0, 1, 0);
+  const boost = p => 1 + 70 * Math.exp(-p.distanceToSquared(C) / .1);
+  function cell(D, color, o) {
+    const sub = new THREE.Group(); g.add(sub);
+    const N = [], A = D.n, rs = D.soma[3] / 20 * 1.15;
+    for (let i = 0; i < A.length; i += 5) N.push({ p: new THREE.Vector3(A[i] / 20, A[i + 1] / 20, A[i + 2] / 20), r: A[i + 3] / 20 * 1.5, par: A[i + 4] });
+    N.forEach((nd, i) => { const q = nd.par >= 0 ? N[nd.par] : null; nd.d = q ? q.d + q.p.distanceTo(nd.p) : nd.p.length(); nd.root = q ? q.root : i; });
+    if (o.place) o.place(N, sub);
+    sub.updateMatrix();
+    const B = stipBuf(), occ = [], mid = new THREE.Vector3();
+    N.forEach(nd => {
+      const q = nd.par >= 0 ? N[nd.par] : null, a = q ? q.p : nd.p.clone().setLength(rs * .8), ra = q ? q.r : nd.r * 1.4, s0 = q ? q.d : 0;
+      mid.addVectors(a, nd.p).multiplyScalar(.5).applyMatrix4(sub.matrix);
+      const rho = o.rho * (o.boost ? boost(mid) : 1), ph = hash(nd.root, o.salt);
+      sTube(B, R, a, nd.p, ra, nd.r, rho, s0, nd.d, 0, ph);
+      if (o.spines && nd.d > .8) sSpines(B, R, a, nd.p, ra, nd.r, o.rho, s0, nd.d, ph, .1);
+      if (o.occ && mid.distanceTo(C) > .5) occ.push([a, nd.p, (ra + nd.r) / 2 * .85]);
+    });
+    sBlob(B, R, [0, 0, 0], rs, rs, rs, o.rho * 2.5, { pyr: true });
+    const mat = stipMat(color, o.mat); mat.uniforms.uDmax.value = Math.max(...N.map(n => n.d));
+    sub.add(stipPoints(B, mat));
+    if (o.occ) {
+      const om = inst(CYL, OCC(), occ.length, sub), dd = new THREE.Vector3(), QQ = new THREE.Quaternion();
+      occ.forEach(([a, b, r], i) => { dd.subVectors(b, a); const L = dd.length(); QQ.setFromUnitVectors(UPV, dd.normalize()); M4.compose(mid.addVectors(a, b).multiplyScalar(.5), QQ, S3.set(r, L, r)); om.setMatrixAt(i, M4); });
+      om.renderOrder = -1;
+      const so = new THREE.Mesh(new THREE.SphereGeometry(rs * .85, 20, 14), OCC()); so.renderOrder = -1; sub.add(so);
+    }
+    return { sub, N, mat };
+  }
+  // the cell that fires
+  const A = cell(NEURON_SWC.a, 0x500000, { rho: 900, salt: 1, spines: true, occ: true, boost: true, mat: { dens: .1 } });
+  // the next cell: pick one of its dendrites, about 100 µm left of its soma and running up, and stand it on the spine's shaft
+  const Bn = cell(NEURON_SWC.b, 0x6e3434, { rho: 800, salt: 2, spines: true, occ: true, boost: true, mat: { dens: .085, tone0: .18 }, place(N, sub) {
+    let best = -1, bs = 1e9;
+    N.forEach((nd, i) => { if (nd.par < 0 || nd.d < 3.5 || nd.d > 9) return; const dir = nd.p.clone().sub(N[nd.par].p).normalize(); const sc = Math.abs(nd.p.x + 5) + .5 * Math.abs(nd.p.y - 1) + .6 * Math.abs(nd.p.z) + 4 * (1 - Math.abs(dir.y)); if (sc < bs) { bs = sc; best = i; } });
+    const nd = N[best], dir = nd.p.clone().sub(N[nd.par].p).normalize(); if (dir.y < 0) dir.negate();
+    sub.quaternion.setFromUnitVectors(dir, UPV);
+    sub.position.set(SYN[0] + RSYN * 8.8, 0, 0).sub(nd.p.clone().applyQuaternion(sub.quaternion));
+    sub.updateMatrix(); SHAFT.r = nd.r / RSYN;
+    const toS = q => q.p.clone().applyMatrix4(sub.matrix).sub(C).divideScalar(RSYN), up = [], dn = [];
+    for (let q = nd, L = 0; q && L < 1.2; L += q.par >= 0 ? q.p.distanceTo(N[q.par].p) : 9, q = q.par >= 0 ? N[q.par] : null) up.push(toS(q));
+    for (let q = N.find(m => m.par === best), L = 0, prev = nd; q && L < 1.2; L += q.p.distanceTo(prev.p), prev = q, q = N.find(m => m.par === N.indexOf(prev))) dn.push(toS(q));
+    SHAFT.pts = [...up.reverse(), ...dn];
+  } });
+  const Bsoma = Bn.sub.position.clone();
+  // faint cells further back, so the two sit in tissue rather than in empty space
+  [[NEURON_SWC.a, [-8, 2, -15], 2.5], [NEURON_SWC.b, [27, -3, -17], -1.1], [NEURON_SWC.a, [9, 13, -24], .9], [NEURON_SWC.b, [-2, -14, -20], 3.6]].forEach(([D, p, ry], k) =>
+    cell(D, 0x500000, { rho: 260, salt: 10 + k, mat: { op: .32, dens: .07 }, place(N, sub) { sub.position.set(...p); sub.rotation.y = ry; } }));
+  // the axon: a bare initial segment, myelin sheaths with nodes of Ranvier, then a bare terminal with boutons
+  const ax = new THREE.CatmullRomCurve3([[0, -.75, 0], [.15, -1.7, .1], [1.2, -3.6, .4], [4.5, -5.3, .3], [9, -4.7, -.2], [12.4, -2.6, -.2], [14.2, -.35, 0], [14.6, -.03, 0], [SYN[0] - 6.0 * RSYN, 0, 0]].map(a => new THREE.Vector3(...a)), false, 'centripetal');
+  const Lax = ax.getLength(), NODES = [1.0]; while (NODES[NODES.length - 1] + 1.45 < Lax - 1.3) NODES.push(NODES[NODES.length - 1] + 1.45);
+  const Bx = stipBuf(), at = s => ax.getPointAt(clamp(s / Lax)), tan = s => ax.getTangentAt(clamp(s / Lax));
+  const bare = (s0, s1, r) => { for (let s = s0; s < s1 - 1e-6; s += .06) { const e = Math.min(s1, s + .06), a = at(s), b = at(e), rho = 900 * boost(a); sTube(Bx, R, a, b, r, r, rho, s, e, 2, 0); } };
+  bare(0, NODES[0], .055);
+  for (let i = 0; i < NODES.length; i++) {
+    const a = NODES[i] + .1, b = i + 1 < NODES.length ? NODES[i + 1] : Lax - 1.3;
+    bare(NODES[i], a, .05);
+    for (let s = a + .02; s < b - .02; s += .055) {   // myelin: rings of dots, like the hatching of an engraving
+      const rm = .11 * (.55 + .45 * ss(clamp((s - a) / .18)) * ss(clamp((b - s) / .18))), c = at(s), m = Math.ceil(6.2832 * rm / .028); frameOf(tan(s));
+      for (let j = 0; j < m; j++) { const th = (j + .3 * R()) / m * 6.2832, cx = Math.cos(th), sx = Math.sin(th), nx = _u.x * cx + _w.x * sx, ny = _u.y * cx + _w.y * sx, nz = _u.z * cx + _w.z * sx; sAdd(Bx, R, c.x + nx * rm, c.y + ny * rm, c.z + nz * rm, nx, ny, nz, 650, 450, s, 2, 0); }
+    }
+  }
+  bare(Lax - 1.3, Lax, .045);
+  const sb = at(Lax - .75), SIDE = [[14.55, .62, .3], [14.45, -.66, -.3]].map(p => new THREE.Vector3(...p));
+  SIDE.forEach(p => { sTube(Bx, R, sb, p, .04, .035, 900 * boost(p), Lax - .75, Lax, 2, 0); sBlob(Bx, R, [p.x, p.y, p.z], .1, .1, .1, 900 * boost(p), { k: 2, s: Lax }); });
+  // the bouton has the same shape as the presynaptic terminal of the synapse level, scaled down
+  const matX = stipMat(0x500000, { dens: .1 }); g.add(stipPoints(Bx, matX));
+  const Bb = stipBuf(); sBlob(Bb, R, [SYN[0] - 3 * RSYN, 0, 0], 3.2 * RSYN, 3.6 * RSYN, 3.6 * RSYN, 900 * 30, { xmax: SYN[0] - .05 * RSYN, k: 2, s: Lax });
+  const matB = stipMat(0x500000, { dens: .1 }); g.add(stipPoints(Bb, matB));
+  const ao = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([...Array(40)].map((_, i) => at(i / 39 * (Lax - 1.0)))), 120, .045, 8), OCC()); ao.renderOrder = -1; g.add(ao);
+  // the spine of the next cell, the same shape as the synapse level's spine head and neck
+  const Bs = stipBuf(), X = x => SYN[0] + RSYN * x;
+  sBlob(Bs, R, [X(1.8), 0, 0], 1.9 * RSYN, 2.6 * RSYN, 2.6 * RSYN, 900 * 30, { xmin: X(.5) });
+  sTube(Bs, R, new THREE.Vector3(X(3.55), 0, 0), new THREE.Vector3(X(8.8), 0, 0), .62 * RSYN, .55 * RSYN, 900 * 25, 0, 0, 1, 0);
+  const matS = stipMat(0x6e3434, { dens: .085, tone0: .18 }); g.add(stipPoints(Bs, matS));
+  const salt = s => { if (s < NODES[0]) return s; for (let i = 0; i < NODES.length - 1; i++) if (s < NODES[i + 1]) { const f = (s - NODES[i]) / (NODES[i + 1] - NODES[i]); return NODES[i] + (NODES[i + 1] - NODES[i]) * ss(clamp((f - .6) / .4)); } return s; };
+  return {
+    g, view: { t: [7.5, 1, 0], d: 52, az: .25, el: .2 }, hide() {},
+    labels: [['cell body', [0, 2.2, 0]], ['dendrites', [-5, 8, 0]], ['myelinated axon', [6.5, -4.6, 0]], ['synapse', [SYN[0], .8, 0]], ['next neuron', [Bsoma.x, Bsoma.y + 1.4, Bsoma.z]]],
+    update(tt, vis = 1) {
+      const W = matX.uniforms.uW.value; let fl = 0;
+      for (let k = 0; k < 4; k++) { const u = frac(tt * .16 + k / 4); W[k] = vis > .02 ? salt(u * Lax) : -99; fl = Math.max(fl, Math.exp(-(((u < .5 ? u : 1 - u) / .025) ** 2))); }
+      A.mat.uniforms.uSoma.value = .8 * fl * vis; A.mat.uniforms.uT.value = tt; A.mat.uniforms.uWave.value = vis;
+      Bn.mat.uniforms.uT.value = tt * .8 + 3; Bn.mat.uniforms.uWave.value = .7 * vis;
+      matB.userData.k = matS.userData.k = vis;   // the bouton and spine give way to the synapse level as the camera closes in
+    },
+  };
+}
+
+// one synapse, side view: presynaptic terminal (x < 0), a 20 nm cleft, a spine head of the next neuron (x > 0.5). Four spikes strengthen it.
+// Same stipple as the neurons; ions and transmitters are solid beads with short trails.
+const C_T = new THREE.Color(0x3d6fb6), C_NA = new THREE.Color(0x7b5ea7), C_CA = new THREE.Color(0x2f7f8f), C_K = new THREE.Color(0x6b7a8f), C_R = new THREE.Color(0x4e668b);
+const insDone = s => clamp(Math.floor(s - .93) + 1, 0, 4);
+function spikeState(s) { const k = Math.min(3, Math.floor(s)); return { s, k, ph: s >= 4 ? 1 : s - k, done: s >= 4 }; }
+const DOT_VS = `
+uniform float uPx, uOp; attribute vec3 aCol; attribute float aSize, aAlpha; varying vec3 vC; varying float vA;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0); float sc = length((modelViewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+  float px = aSize * projectionMatrix[1][1] * uPx * sc / max(1e-6, -mv.z);
+  gl_PointSize = max(1.0, px); vC = aCol; vA = aAlpha * uOp * clamp(px / 1.5, 0.0, 1.0); gl_Position = projectionMatrix * mv;
+}`;
+const DOT_FS = `
+varying vec3 vC; varying float vA;
+void main() { float d = length(gl_PointCoord - 0.5); if (d > 0.5 || vA < 0.004) discard; gl_FragColor = vec4(mix(vC, vC * 0.45, smoothstep(0.3, 0.45, d)), vA * (1.0 - smoothstep(0.44, 0.5, d))); }`;
+function dotLayer(n, parent) {
+  const g = new THREE.BufferGeometry(), pos = new THREE.BufferAttribute(new Float32Array(n * 3), 3), col = new THREE.BufferAttribute(new Float32Array(n * 3), 3), sz = new THREE.BufferAttribute(new Float32Array(n), 1), al = new THREE.BufferAttribute(new Float32Array(n), 1);
+  g.setAttribute('position', pos); g.setAttribute('aCol', col); g.setAttribute('aSize', sz); g.setAttribute('aAlpha', al);
+  const mat = new THREE.ShaderMaterial({ uniforms: { uPx: UPX, uOp: { value: 1 } }, vertexShader: DOT_VS, fragmentShader: DOT_FS, transparent: true, depthWrite: false });
+  const P = new THREE.Points(g, mat); P.frustumCulled = false; P.renderOrder = 3; P.onBeforeRender = () => { mat.uniforms.uOp.value = mat.opacity; }; parent.add(P);
+  let i = 0;
+  return {
+    begin() { i = 0; },
+    add(x, y, z, c, size, a) { if (i >= n || a <= .003) return; pos.setXYZ(i, x, y, z); col.setXYZ(i, c.r, c.g, c.b); sz.setX(i, size); al.setX(i, a); i++; },
+    end() { for (let k = i; k < n; k++) al.setX(k, 0); pos.needsUpdate = col.needsUpdate = sz.needsUpdate = al.needsUpdate = true; },
+  };
+}
+function buildSynapse() {
+  const g = new THREE.Group(), R = rng(31), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const PRE = 0x500000, POST = 0x34496b;
+  // presynaptic terminal: a bouton flattened at the active zone (x = -0.05), the axon behind it; two shells read as a lipid bilayer at the edge
+  const Bp = stipBuf();
+  sBlob(Bp, R, [-3, 0, 0], 3.2, 3.6, 3.6, 650, { xmax: -.05 }); sBlob(Bp, R, [-3, 0, 0], 3.07, 3.47, 3.47, 220, { xmax: -.18 });
+  sTube(Bp, R, V3(-6.1, 0, 0), V3(-12.5, .4, 0), .9, .8, 520, 0, 0, 1, 0);
+  for (let k = 0; k < 9; k++) { const y = (hash(k, 3) - .5) * 2.4, z = (hash(k, 4) - .5) * 2.4; if (y * y + z * z > 1.3) continue; for (let j = 0; j < 70; j++) { const h = R() * .32; sAdd(Bp, R, -.06 - h, y + (R() - .5) * .22 * (1 - h / .32), z + (R() - .5) * .22 * (1 - h / .32), -1, 0, 0, 3000, 1e9, 0, 1, 0); } }   // dense projections of the active zone
+  g.add(stipPoints(Bp, stipMat(PRE, { dens: .042, size: 1.5, rim: 2.0, tone0: .12 })));
+  // spine head of the next neuron, its neck and the dendrite it grows from
+  const Bq = stipBuf();
+  sBlob(Bq, R, [1.8, 0, 0], 1.9, 2.6, 2.6, 650, { xmin: .5 }); sBlob(Bq, R, [1.8, 0, 0], 1.77, 2.47, 2.47, 220, { xmin: .63 });
+  sTube(Bq, R, V3(3.55, 0, 0), V3(8.8 - SHAFT.r * .8, 0, 0), .62, .55, 520, 0, 0, 1, 0);
+  if (SHAFT.pts.length > 1) { const sc = new THREE.CatmullRomCurve3(SHAFT.pts, false, 'centripetal'), sp = sc.getSpacedPoints(80); for (let i = 1; i < sp.length; i++) sTube(Bq, R, sp[i - 1], sp[i], SHAFT.r, SHAFT.r, 420, 0, 0, 1, 0); }
+  g.add(stipPoints(Bq, stipMat(POST, { dens: .042, size: 1.5, rim: 2.0, tone0: .12, hot: POST })));
+  // postsynaptic density: a dense band under the membrane, where receptors are anchored
+  const Bd = stipBuf();
+  for (let j = 0; j < 3200; j++) { const rr = 1.45 * Math.sqrt(R()), th = R() * 6.2832; sAdd(Bd, R, .58 + R() * .22 * (1 - .5 * rr / 1.45), rr * Math.cos(th), rr * Math.sin(th), -1, 0, 0, 2500, 1e9, 0, 1, 0); }
+  g.add(stipPoints(Bd, stipMat(0x1f2c45, { dens: .16, size: 1.4, tone0: .7, rim: 0 })));
+  // adhesion proteins bridging the cleft
+  const AD = []; for (let k = 0; k < 30; k++) { const rr = 1.25 * Math.sqrt(hash(k, 8)), th = hash(k, 9) * 6.2832, y = rr * Math.cos(th), z = rr * Math.sin(th); AD.push(V3(-.04, y, z), V3(.18, y + .05, z), V3(.18, y + .05, z), V3(.5, y, z)); }
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(AD), new THREE.LineBasicMaterial({ color: 0x34496b, transparent: true, opacity: .28 })));
+  // synaptic vesicles: stippled shells; one docks and fuses on each spike
+  const vb = stipBuf(); sBlob(vb, R, [0, 0, 0], .42, .42, .42, 1400, {}); const vgeo = stipPoints(vb, stipMat(PRE)).geometry;
+  const vmat = stipMat(PRE, { dens: .2, size: 1.3, rim: 2, tone0: .3 }), dmat = stipMat(PRE, { dens: .2, size: 1.3, rim: 2, tone0: .3 });
+  const ves = p => { const P = new THREE.Points(vgeo, vmat); P.frustumCulled = false; P.renderOrder = 2; P.onBeforeRender = () => { vmat.uniforms.uOp.value = vmat.opacity; }; P.position.set(...p); g.add(P); return P; };
+  const VES = [[-1.6, 1.2, .6], [-2.2, -.9, -.4], [-1.2, -1.6, 1.0], [-2.6, .4, -1.2], [-1.4, .6, -1.5], [-2.0, 1.9, -.3], [-1.0, -.5, -1.0], [-2.7, -1.5, .8]];
+  VES.forEach(ves);
+  const dock = new THREE.Points(vgeo, dmat); dock.frustumCulled = false; dock.renderOrder = 2; dock.onBeforeRender = () => { dmat.uniforms.uOp.value = dmat.opacity * dmat.userData.k; }; g.add(dock);
+  // proteins: four stippled subunits around a pore along x; they spread apart when the pore opens
+  const lb = stipBuf(); sBlob(lb, R, [0, 0, 0], .3, .11, .11, 3200, {}); const lgeo = stipPoints(lb, stipMat(PRE)).geometry;
+  const protein = (color, big) => { const m = stipMat(color, { dens: .25, size: 1.3, rim: 1.4, tone0: .35 }), L = []; for (let j = 0; j < 4; j++) { const P = new THREE.Points(lgeo, m); P.frustumCulled = false; P.renderOrder = 2; P.onBeforeRender = () => { m.uniforms.uOp.value = m.opacity; }; P.scale.setScalar(big ? 1.3 : 1); g.add(P); L.push(P); } return L; };
+  const setP = (L, x, y, z, gp, on = true) => L.forEach((P, j) => { const a = .785 + j * 1.571; P.visible = on; P.position.set(x, y + Math.cos(a) * gp, z + Math.sin(a) * gp); });
+  const CACH = [[1.0, .5], [-1.0, -.3]], cach = CACH.map(() => protein(C_CA));
+  const AM = [[.9, .6], [-.8, .4], [.5, -1.1], [-.6, -1.2], [1.6, -.2], [-1.6, .1], [.1, 1.5]].map(([y, z]) => [y * .85, z * .85]), NM = [0, -.2];
+  const amp = AM.map(() => protein(C_R)), nmda = protein(C_CA, true);
+  const D = dotLayer(900, g);
+  return {
+    g, view: { t: [-.8, 0, 0], d: 19.5, az: .12, el: .14 }, hide() {}, spike: 0,
+    labels: [['presynaptic terminal', [-3, 3.9, 0]], ['synaptic vesicle', [-2.6, .9, -1.2]], ['Ca2+ channel', [-.05, 1.35, .5]], ['AMPA receptor', [.62, -.68, -.93]], ['~20 nm cleft', [.25, -1.6, 0]], ['spine of the next neuron', [2.0, 2.9, 0]]],
+    update(tt) {
+      const { s, ph, done } = spikeState(this.spike), nIns = insDone(s), nR = 3 + nIns;
+      const ap = done ? 0 : seg(ph, 0, .16), caOpen = done ? 0 : seg(ph, .14, .2) * (1 - seg(ph, .42, .5));
+      const dk = done ? 0 : seg(ph, .22, .36), fuse = done ? 1 : seg(ph, .36, .44), rel = done ? 0 : seg(ph, .4, .46) * (1 - seg(ph, .66, .76));
+      const open = done ? 0 : seg(ph, .46, .52) * (1 - seg(ph, .76, .84)), ins = done ? 0 : seg(ph, .8, .93);
+      dock.position.set(lerp(-1.7, -.47, dk) + .3 * fuse, 0, 0); dock.scale.set(lerp(1, .2, fuse), lerp(1, 1.5, fuse), lerp(1, 1.5, fuse)); dmat.userData.k = 1 - fuse;
+      CACH.forEach(([y, z], i) => setP(cach[i], -.05, y, z, .1 + .12 * caOpen));
+      for (let i = 0; i < 7; i++) setP(amp[i], i === nR ? lerp(2.4, .62, ins) : .62, AM[i][0], AM[i][1], .08 + .1 * open, i < nR || (i === nR && ins > 0));
+      setP(nmda, .66, NM[0], NM[1], .12 + .1 * open);
+      D.begin();
+      const bead = (f, u, c, a, size = .26) => { for (let j = 0; j < 4; j++) { const uu = u - j * .03; if (uu < 0 || uu > 1) continue; const [x, y, z] = f(uu); D.add(x, y, z, c, size * (1 - .2 * j), a * Math.sin(Math.PI * uu) * (j ? .42 - .1 * j : 1)); } };
+      [...VES, fuse < .5 ? [dock.position.x, 0, 0] : null].forEach((p, v) => { if (p) for (let k = 0; k < 6; k++) D.add(p[0] + Math.cos(k * 1.3 + v) * .19, p[1] + Math.sin(k * 1.3 + v) * .19, p[2] + Math.sin(k * 2.1) * .14, C_T, .14, .95); });
+      if (ap > 0 && ap < 1) for (let k = 0; k < 10; k++) {   // the action potential sweeps over the terminal towards the active zone: Na+ in, K+ out behind it
+        const phi = k / 10 * 6.283, u = frac(tt * 1.3 + k * .3), th = ap * Math.PI * .9, t2 = Math.max(0, th - .55);
+        bead(q => { const sc = 1.12 - .2 * q; return [-3 - 3.2 * sc * Math.cos(th), 3.6 * sc * Math.sin(th) * Math.cos(phi), 3.6 * sc * Math.sin(th) * Math.sin(phi)]; }, u, C_NA, 1);
+        if (ap > .2) bead(q => { const sc = .92 + .2 * q; return [-3 - 3.2 * sc * Math.cos(t2), 3.6 * sc * Math.sin(t2) * Math.cos(phi + .3), 3.6 * sc * Math.sin(t2) * Math.sin(phi + .3)]; }, u, C_K, .9, .22);
+      }
+      if (caOpen > 0) for (let k = 0; k < 12; k++) { const [y, z] = CACH[k % 2]; bead(q => [lerp(.4, -1.3, q), y + Math.sin(k + q * 5) * .05, z], frac(tt * .9 + k / 12), C_CA, caOpen); }
+      if (rel > 0) for (let k = 0; k < 24; k++) { const tg = k % (nR + 1) === nR ? NM : AM[k % nR]; bead(q => [lerp(-.05, .5, q), lerp((hash(k, 5) - .5) * .5, tg[0], q), lerp((hash(k, 6) - .5) * .5, tg[1], q)], frac(tt * .8 + k / 24), C_T, rel, .16); }
+      if (open > 0) { for (let k = 0; k < 18; k++) { const [y, z] = AM[k % nR]; bead(q => [lerp(.3, 2.8, q), y + .25 * q * Math.sin(k), z + .25 * q * Math.cos(k)], frac(tt * .9 + k / 18), C_NA, open); } for (let k = 0; k < 6; k++) bead(q => [lerp(.3, 2.8, q), NM[0], NM[1]], frac(tt * .7 + k / 6), C_CA, open); }
+      D.end();
+    },
+  };
+}
+
+/* ===================== the whole path: transitions between levels ===================== */
+const LP = buildPeople(), LB = buildBrain(), LN = buildNeuron(), LS = buildSynapse(), LM = buildMem(), LX = buildXbar(), LT = buildChipTop(), LK = buildPkg();
+[LX, LT, LK, LP].forEach(l => l.init && l.init());
+const ALL = [LP, LB, LN, LS, LM, LX, LT, LK];
+// fixed-pixel dots (people, brain graph, lattice) shrink with the camera pull-back on narrow screens, so a small brain does not turn into blobs
+const PTS = []; ALL.forEach(l => l.g.traverse(o => { if (o.isPoints && o.material.isPointsMaterial && !o.material.sizeAttenuation) PTS.push([o.material, o.material.size]); }));
+const fitPoints = () => PTS.forEach(([m, s0]) => { m.size = s0 / Math.pow(FIT, .8); });
+fitPoints();
+const [hax, hay, bsA] = LP.HAX;
+const TR = {
+  PB: { o: LP, i: LB, a: [hax, hay, 0], r: bsA, dark: () => 0, fov: [3.8, .25], set(s) { LP.mode = 'start'; LP.fadeA = seg(s, .08, .45); } },
+  BN: { o: LB, i: LN, a: LB.tgt.toArray(), r: .021, dark: () => 0, fov: [.25, 4.3e-4] },
+  NS: { o: LN, i: LS, a: SYN, r: RSYN, dark: () => 0, fov: [4.3e-4, 1.2e-6] },
+  SM: { o: LS, i: LM, a: [.22, 0, 0], r: 2.7, swap: true, dark: s => seg(s, .38, .6), fov: [1.2e-6, 1.2e-8] },
+  MX: { o: LX, i: LM, a: LX.anchor, r: LX.r, dark: () => 1, fov: [2e-6, 1.2e-8] },
+  XT: { o: LT, i: LX, a: LT.anchor, r: LT.r, dark: () => 1, fov: [1.2e-4, 2e-6] },
+  TK: { o: LK, i: LT, a: LK.anchor, r: LK.r, dark: () => 1, fov: [5e-2, 1.2e-4] },
+  KP: { o: LP, i: LK, a: LP.anchor, r: LP.r, dark: s => 1 - seg(1 - s, .45, .85), fov: [3.8, 5e-2], set() { LP.mode = 'end'; LP.fadeA = 0; } },
+};
+// scroll script: [transition, s from, s to, weight, caption (or [a, b, split])]
+const SEGS = [
+  ['PB', 0, 0, .5, 0], ['PB', 0, 1, 2.2, [0, 1, .55]], ['BN', 0, 0, 1.8, 1], ['BN', 0, 1, 1.6, [1, 2, .6]], ['NS', 0, 0, .8, 2], ['NS', 0, 1, 1.6, [2, 3, .6]],
+  ['SM', 0, 0, 3.4, 3], ['SM', 0, 1, 1.2, [3, 4, .5]], ['MX', 1, 1, 2.6, 4], ['MX', 1, 0, 1.6, [4, 5, .5]], ['XT', 1, 1, 1.3, 5], ['XT', 1, 0, 1.6, [5, 6, .5]],
+  ['TK', 1, 1, .8, 6], ['TK', 1, 0, 1.6, [6, 7, .5]], ['KP', 1, 1, .9, 7], ['KP', 1, 0, 2.6, [7, 8, .4]], ['KP', 0, 0, .9, 9],
+];
+const WSUM = SEGS.reduce((a, s) => a + s[3], 0), I_SPK = 6, I_SET = 8;
+function locate(q) { let acc = 0; for (let i = 0; i < SEGS.length; i++) { const w = SEGS[i][3] / WSUM; if (q <= acc + w || i === SEGS.length - 1) return { i, u: clamp((q - acc) / w) }; acc += w; } }
+const CAPS = [
+  ['01', 'Two people, talking', 'A conversation: two minds exchanging signals.'],
+  ['02', 'A brain made of connections', 'Eyes stream events (DVS) that build up into a frame, ears take in sound and text, and the answer goes out.'],
+  ['03', 'A neuron', 'Each node is a cell: it gathers inputs and sends spikes down its axon.'],
+  ['04', 'A synapse', 'Each spike opens Ca²⁺ channels and releases transmitters across a 20 nm gap. Na⁺ flows into the next neuron, Ca²⁺ adds receptors, and the connection grows until that neuron fires.'],
+  ['05', 'Same function, different substrate', 'Each voltage pulse drives O²⁻ ions out of the oxide; the vacancies left behind line up into a filament. Conductance rises step by step, like the synapse.'],
+  ['06', 'One crossbar', 'Input voltages run along the rows. Each memristor passes a current set by its weight, and every column adds them up: a multiply–accumulate, done where the weights are stored.'],
+  ['07', 'Tiles on CMOS', 'The die is tiled: each tile is a crossbar with its own DACs, ADCs and neurons, stacked on the CMOS below. Inputs climb through vias and currents drop back down, while spikes travel between tiles.'],
+  ['08', 'A 2.5D package', 'Neuromorphic chiplets and memory stacks sit side by side on a silicon interposer (CoWoS-style), wired by dense fine lines. Adding chiplets scales the system out.'],
+  ['09', 'A brain made of silicon', 'The second speaker thinks with a lattice of memristors, the chip at its centre.'],
+  ['10', 'Two minds, talking', 'One brain made of cells, one made of memristors, in the same conversation.'],
+];
+
+function fadeGroup(g, a) {
+  g.visible = a > .01;
+  g.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const mt of ms) {
+    if (mt.userData.o0 === undefined) { mt.userData.o0 = mt.opacity; mt.userData.t0 = mt.transparent; }
+    const tr = mt.userData.t0 || a < .999; if (mt.transparent !== tr) { mt.transparent = tr; mt.needsUpdate = true; }
+    mt.opacity = mt.userData.o0 * a; } });
+}
+
+/* ===================== screen-space insets: eye / ear / mouth, and the synapse ↔ memristor graphs ===================== */
+const ov = document.getElementById('ov'), O = ov.getContext('2d');
+ov.width = Math.round(W * PXR); ov.height = Math.round(H * PXR); O.setTransform(PXR, 0, 0, PXR, 0, 0);
+const FACE = []; for (let i = 0; i < FACE_PTS.length; i += 3) FACE.push([FACE_PTS[i] / 1000, FACE_PTS[i + 1] / 1000, FACE_PTS[i + 2] / 9]);
+let INK = [80, 0, 0], PAPER = [255, 255, 255];
+const ink = a => `rgba(${INK[0]},${INK[1]},${INK[2]},${clamp(a)})`, paper = a => `rgba(${PAPER[0]},${PAPER[1]},${PAPER[2]},${clamp(a)})`;
+const oL = (x0, y0, x1, y1, w, st) => { O.beginPath(); O.moveTo(x0, y0); O.lineTo(x1, y1); O.lineWidth = w; O.strokeStyle = st; O.stroke(); };
+const oD = (x, y, r, f) => { O.beginPath(); O.arc(x, y, r, 0, 6.2832); O.fillStyle = f; O.fill(); };
+const oT = (t, x, y, f, size, align = 'left', wt = 500) => { O.font = size ? `italic 500 ${size}px "Cormorant Garamond", Georgia, serif` : `${wt} 10.5px "Inter Tight", sans-serif`; O.letterSpacing = size ? '0px' : '1px'; O.textAlign = align; O.fillStyle = f; O.fillText(size ? t : t.toUpperCase(), x, y); };
+const oPanel = (x, y, w, h, a, title) => { O.fillStyle = paper(.93 * a); O.fillRect(x, y, w, h); O.lineWidth = 1; O.strokeStyle = ink(.4 * a); O.strokeRect(x, y, w, h); if (title) oT(title, x + 10, y + 17, ink(a), 0, 'left', 600); };
+// eye, ear and mouth: a small mark on the head, a dashed path with an arrow, and dots flowing the way the signal goes
+function oArrow(x0, y0, x1, y1, a, bend, flow, gap = 14) {
+  const L = Math.hypot(x1 - x0, y1 - y0) || 1; x1 -= (x1 - x0) / L * gap; y1 -= (y1 - y0) / L * gap;
+  const mx = (x0 + x1) / 2 + bend * (y1 - y0) * .3, my = (y0 + y1) / 2 - bend * (x1 - x0) * .3;
+  const at = t => [(1 - t) ** 2 * x0 + 2 * (1 - t) * t * mx + t * t * x1, (1 - t) ** 2 * y0 + 2 * (1 - t) * t * my + t * t * y1];
+  O.beginPath(); O.moveTo(x0, y0); O.quadraticCurveTo(mx, my, x1, y1); O.setLineDash([3, 4]); O.lineWidth = 1.2; O.strokeStyle = ink(a * .55); O.stroke(); O.setLineDash([]);
+  const [ex, ey] = at(.95), ang = Math.atan2(y1 - ey, x1 - ex);
+  O.beginPath(); O.moveTo(x1, y1); O.lineTo(x1 - 9 * Math.cos(ang - .42), y1 - 9 * Math.sin(ang - .42)); O.lineTo(x1 - 9 * Math.cos(ang + .42), y1 - 9 * Math.sin(ang + .42)); O.closePath(); O.fillStyle = ink(a * .85); O.fill();
+  for (let k = 0; k < 3; k++) { const t = frac(flow + k / 3), [x, y] = at(t); oD(x, y, 2.4, ink(a * Math.sin(Math.PI * t))); }
+}
+const oGlow = (x, y, r, a) => { if (a < .02) return; const g = O.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, ink(.32 * a)); g.addColorStop(1, ink(0)); O.fillStyle = g; O.beginPath(); O.arc(x, y, r, 0, 6.2832); O.fill(); };
+function oMark(kind, x, y, a, label, side) {
+  oD(x, y, 15, paper(.9 * a)); O.lineWidth = 1.5; O.strokeStyle = ink(a); O.beginPath();
+  if (kind === 'eye') { O.moveTo(x - 11, y); O.quadraticCurveTo(x, y - 10, x + 11, y); O.quadraticCurveTo(x, y + 10, x - 11, y); O.stroke(); oD(x, y, 3.4, ink(a)); }
+  else if (kind === 'ear') { O.arc(x, y - 1, 8, Math.PI * 1.15, Math.PI * 2.45); O.stroke(); O.beginPath(); O.arc(x + 1, y, 3.5, Math.PI * 1.2, Math.PI * 2.3); O.stroke(); }
+  else { O.moveTo(x - 11, y); O.quadraticCurveTo(x, y - 6, x + 11, y); O.quadraticCurveTo(x, y + 8, x - 11, y); O.stroke(); oL(x - 11, y, x + 11, y, 1, ink(a * .7)); }
+  oT(label, x + side * 20, y + 4, ink(a), 0, side > 0 ? 'left' : 'right', 600);
+}
+function drawIO(io, lb, tt, P) {
+  const fr = Math.floor(tt * 12);
+  if (P.faceB) for (const k of [-24, -8, 8, 24]) oL(P.faceB[0], P.faceB[1] + k, P.eye[0], P.eye[1], 1, ink(io * .14));
+  // eye: DVS events build up into a frame, which travels in through the eye to the back of the brain
+  const CP = compact(), FT = CP ? 15 : 22, ps = CP ? 96 : 150, px0 = CP ? W - ps - 52 : W * .60, py0 = CP ? H * .13 : H * .14, pcx = px0 + ps / 2, pcy = py0 + ps / 2, fs = ps * .44;
+  const cyc = (tt * .2) % 1, acc = seg(cyc, .05, .55), pk = seg(cyc, .66, .95);
+  oPanel(px0, py0, ps, ps, io);
+  oArrow(px0, py0 + ps * .7, P.eye[0], P.eye[1], io, -.4, tt * .6);
+  if (pk <= 0) for (let i = 0; i < FACE.length; i++) {
+    const [fx, fy, tn] = FACE[i], x = pcx + fx * fs, y = pcy + fy * fs;
+    if (hash(i, 77) < acc * (1.15 - tn * .5)) oD(x, y, .55 + .45 * (1 - tn), ink(io * (.25 + .7 * (1 - tn))));
+    if (hash(i, fr) < .04 + .08 * (1 - tn)) { if (hash(i + 5, fr) > .45) oD(x, y, 1.3, ink(io)); else { O.beginPath(); O.arc(x, y, 1.3, 0, 6.2832); O.lineWidth = .8; O.strokeStyle = ink(io * .8); O.stroke(); } }
+  } else {
+    const first = pk < .3, q = first ? pk / .3 : (pk - .3) / .7, A0 = first ? [pcx, pcy] : P.eye, A1 = first ? P.eye : P.occ;
+    const cx = lerp(A0[0], A1[0], ss(q)), cy = lerp(A0[1], A1[1], ss(q)) - (first ? 0 : Math.sin(Math.PI * q) * 30), sc = fs * (first ? lerp(1, .3, q) : lerp(.3, .12, q));
+    for (let i = 0; i < FACE.length; i += 3) { const [fx, fy, tn] = FACE[i]; oD(cx + fx * sc, cy + fy * sc, .7, ink(io * (.35 + .6 * (1 - tn)) * (1 - seg(pk, .9, 1) * .7))); }
+  }
+  oGlow(P.occ[0], P.occ[1], 46, io * seg(pk, .8, .95) * (1 - seg(cyc, .97, 1)));
+  oT('sees · ' + (pk > 0 || acc > .5 ? (CP ? 'frame' : 'accumulated frame') : (CP ? 'DVS' : 'DVS events')), px0, py0 - 9, ink(lb));
+  // ear: sound and words come in through the ear to the side of the brain
+  const ax0 = CP ? 24 : W * .05, ay0 = CP ? H * .13 + 8 : H * .2, aw = CP ? Math.min(150, px0 - 60) : 250, ah = CP ? 15 : 26, nb = CP ? 40 : 64;
+  oPanel(ax0 - 10, ay0 - 8, aw + 20, ah * 2 + 52, io);
+  for (let i = 0; i < nb; i++) { const s = i / nb, env = (.5 + .5 * Math.sin(s * 9 - tt * 2.2)) ** 2 * (.35 + .65 * Math.max(0, Math.sin(s * 2.3 - tt * .7 + 1))), amp = ah * (.1 + .9 * env * (.5 + .5 * Math.abs(Math.sin(i * 1.7 + tt * 9)))); oL(ax0 + s * aw, ay0 + ah - amp, ax0 + s * aw, ay0 + ah + amp, 1.6, ink(io * .85)); }
+  oArrow(ax0 + aw + 10, ay0 + ah, P.ear[0], P.ear[1], io, .35, tt * .6);
+  const WD = ['how', 'does', 'a', 'synapse', 'learn?'], wc = (tt * .5) % 1, nw = Math.min(5, Math.floor(wc * 7));
+  oT(WD.slice(0, nw).join(' '), ax0, ay0 + 2 * ah + 30, ink(io * (1 - seg(wc, .85, 1))), FT);
+  if (wc > .72) { const q = seg(wc, .72, .98); for (let i = 0; i < 6; i++) { const qq = clamp(q * 1.3 - i * .06); oD(lerp(P.ear[0], P.tmp[0], qq), lerp(P.ear[1], P.tmp[1], qq), 2.4, ink(io * (1 - qq * .5))); } }
+  oGlow(P.tmp[0], P.tmp[1], 40, io * seg(wc, .9, 1));
+  oT('hears · sound + words', ax0 - 10, ay0 - 18, ink(lb));
+  // mouth: the answer leaves from the front of the brain, out through the mouth
+  const oc = (tt * .5 + .5) % 1;
+  oGlow(P.fro[0], P.fro[1], 40, io * (1 - seg(oc, .05, .4)));
+  if (oc < .5) { const q = seg(oc, 0, .5); oD(lerp(P.fro[0], P.mouth[0], q), lerp(P.fro[1], P.mouth[1], q), 2.6, ink(io * Math.sin(Math.PI * q))); }
+  const tx0 = CP ? W * .36 : W * .75, ty0 = CP ? H * .7 : H * .74, AN = ['by', 'changing', 'its', 'weight'], na = oc < .45 ? 0 : Math.min(4, Math.floor(seg(oc, .45, .9) * 5));
+  oPanel(tx0 - 10, ty0 - (CP ? 26 : 30), CP ? 160 : 200, CP ? 38 : 46, io);
+  oArrow(P.mouth[0] + 16, P.mouth[1] + 4, tx0 - 10, ty0 - 7, io, .3, tt * .6, 4);
+  oT(AN.slice(0, na).join(' '), tx0, ty0, ink(io * (1 - seg(oc, .92, 1))), FT); oT('says · answer', tx0 - 10, ty0 - 40, ink(lb));
+  oMark('eye', P.eye[0], P.eye[1], io, 'eye', 1); oMark('ear', P.ear[0], P.ear[1], io, 'ear', -1); oMark('mouth', P.mouth[0], P.mouth[1], io, 'mouth', -1);
+}
+const G_BIO = [.2, .38, .53, .66, .78], G_MEM = [.12, .34, .52, .67, .8];
+function vmAt(s) { let v = .12; for (let j = 0; j < 4; j++) { const tau = s - (j + .5); if (tau <= 0) continue; v += [.13, .25, .37, .49][j] * 1.6 * (Math.exp(-tau / .3) - Math.exp(-tau / .06)); if (j === 3) v += .5 * Math.exp(-(((tau - .13) / .04) ** 2)) - .2 * Math.exp(-(((tau - .26) / .08) ** 2)); } return v; }
+function gBio(s) { const n = insDone(s); if (n >= 4) return G_BIO[4]; const k = Math.floor(s); return lerp(G_BIO[n], G_BIO[n + 1], k === n ? seg(s - k, .8, .93) : 0); }
+function gMem(s) { let g = G_MEM[0]; for (let k = 0; k < 4; k++) g += (G_MEM[k + 1] - G_MEM[k]) * seg(s - k, .2, .95); return g; }
+function drawGraphs(aS, aG, aM, sS, sM) {
+  const CP = compact(); O.save(); if (CP) { O.translate(14 - 24 * .78, 74 - 240 * .78); O.scale(.78, .78); }
+  const L = 24, PW = 300, gx = s => L + 16 + (PW - 32) * s / 4;
+  const path = (pts, lw, st, dash = []) => { O.beginPath(); pts.forEach(([x, y], i) => i ? O.lineTo(x, y) : O.moveTo(x, y)); O.setLineDash(dash); O.lineWidth = lw; O.strokeStyle = st; O.stroke(); O.setLineDash([]); };
+  if (!CP && aS > .003) {
+    oPanel(L, 76, PW, 150, aS, 'SPIKES IN  ·  POTENTIAL OF THE NEXT NEURON');
+    for (let j = 0; j < 4; j++) if (sS >= j) path([[gx(j + .05), 98], [gx(j + .05), 112]], 1.6, ink(aS));
+    const vy = v => 214 - (v + .1) / 1.15 * 92;
+    path([[gx(0), vy(.5)], [gx(4), vy(.5)]], 1, ink(aS * .45), [4, 3]); oT('threshold', L + PW - 12, vy(.5) - 5, ink(aS * .6), 0, 'right');
+    const pts = []; for (let i = 0; i <= 200; i++) { const s = 4 * i / 200; if (s > sS) break; pts.push([gx(s), vy(vmAt(s))]); } if (pts.length > 1) path(pts, 1.6, ink(aS));
+    if (sS > 3.62) oT('fires', gx(3.62) + 8, vy(1.0) + 4, ink(aS), 0, 'left', 600);
+  }
+  if (!CP && aM > .003) {
+    oPanel(L, 76, PW, 150, aM, 'VOLTAGE PULSES  ·  SAME FOUR EVENTS');
+    const pts = [[gx(0), 200]];
+    for (let j = 0; j < 4; j++) { if (sM < j + .05) break; const e = Math.min(sM, j + .85); pts.push([gx(j + .05), 200], [gx(j + .05), 130], [gx(e), 130]); if (sM >= j + .85) pts.push([gx(j + .85), 200]); }
+    pts.push([gx(Math.min(4, sM)), pts[pts.length - 1][1]]); path(pts, 1.6, `rgba(127,178,255,${aM})`);
+  }
+  if (aG > .003) {
+    oPanel(L, 240, PW, 132, aG, 'CONNECTION STRENGTH');
+    const gy = g => 350 - g * 82;
+    for (let j = 1; j <= 4; j++) oT(String(j), gx(j - .5), 366, ink(aG * .5), 0, 'center');
+    const bio = []; for (let i = 0; i <= 160; i++) { const s = 4 * i / 160; if (s > sS) break; bio.push([gx(s), gy(gBio(s))]); } if (bio.length > 1) path(bio, 2, ink(aG * (aM > 0 ? .5 : 1)));
+    oT('synapse · receptors', L + 10, 284, ink(aG * (aM > 0 ? .6 : 1)));
+    if (sM > 0 && aM > 0) { const mem = []; for (let i = 0; i <= 160; i++) { const s = 4 * i / 160; if (s > sM) break; mem.push([gx(s), gy(gMem(s))]); } if (mem.length > 1) path(mem, 2, `rgba(127,178,255,${aM})`); oT('memristor · filament', L + 10, 300, `rgba(127,178,255,${aM})`); }
+  }
+  O.restore();
+}
+
+/* ===================== render ===================== */
+const LOG0 = Math.log10(3.8), LOG1 = Math.log10(1.2e-8);
+function fmt(m) { if (m >= 1) return m.toFixed(1) + ' m'; if (m >= .01) return Math.round(m * 100) + ' cm'; if (m >= 1e-3) return Math.round(m * 1e3) + ' mm'; if (m >= 1e-6) { const v = m * 1e6; return (v >= 10 ? Math.round(v) : v.toFixed(1)) + ' µm'; } return Math.round(m * 1e9) + ' nm'; }
+/* ===================== navigation: drag along the field-of-view scale ===================== */
+// The scale is one line along the story: the field of view shrinks down to 10 nm at the middle (the memristor) and grows again
+// below it, back out through the silicon. p runs 0..1 down the line; each chapter is a stop on it.
+const STOPS = [0, 2, 4, 6, 8, 10, 12, 14, 16];
+const SEGQ = (() => { const a = []; let acc = 0; for (const sg of SEGS) { a.push([acc, acc + sg[3] / WSUM]); acc += sg[3] / WSUM; } return a; })();
+const yOf = f => clamp((Math.log10(f) - LOG0) / (LOG1 - LOG0));
+const fovAt = (i, s) => { const T = TR[SEGS[i][0]]; return Math.exp(lerp(Math.log(T.fov[0]), Math.log(T.fov[1]), s)); };
+const STOP_P = STOPS.map((i, k) => { const y = yOf(fovAt(i, SEGS[i][1])); return k < 4 ? y / 2 : k === 4 ? .5 : 1 - y / 2; });
+function pOfQ(q) { const { i, u } = locate(q), k = STOPS.indexOf(i); if (k >= 0) return STOP_P[k]; const sg = SEGS[i], y = yOf(fovAt(i, lerp(sg[1], sg[2], ss(u)))); return i < STOPS[4] ? y / 2 : 1 - y / 2; }
+function qOfP(p) {
+  let k = 0; while (k < STOPS.length - 2 && p > STOP_P[k + 1]) k++;
+  for (const j of [k, k + 1]) if (Math.abs(p - STOP_P[j]) < 1e-4) return (SEGQ[STOPS[j]][0] + SEGQ[STOPS[j]][1]) / 2;
+  const i = STOPS[k] + 1, sg = SEGS[i], T = TR[sg[0]], y = p <= .5 ? 2 * p : 2 * (1 - p);
+  const s = ((LOG0 + y * (LOG1 - LOG0)) * Math.LN10 - Math.log(T.fov[0])) / (Math.log(T.fov[1]) - Math.log(T.fov[0]));
+  const x = clamp((s - sg[1]) / (sg[2] - sg[1])), u = .5 - Math.sin(Math.asin(1 - 2 * x) / 3);   // undo the smoothstep of the segment
+  return lerp(SEGQ[i][0], SEGQ[i][1], u);
+}
+const nav = document.getElementById('nav'), mk = document.getElementById('mk'), hint = document.getElementById('navh');
+const navXY = p => [15, (p * 100) + '%'];
+for (const [v, t] of [[1, '1 m'], [.1, '10 cm'], [1e-3, '1 mm'], [1e-5, '10 µm'], [1e-7, '100 nm'], [1e-8, '10 nm']]) for (const p of v > 2e-8 ? [yOf(v) / 2, 1 - yOf(v) / 2] : [.5]) {
+  const mi = v < .5 && v > 2e-8 ? ' minor' : '', e = document.createElement('span'); e.className = 'sc' + mi; e.textContent = t; e.style.top = (p * 100) + '%'; nav.appendChild(e);
+  const k = document.createElement('i'); k.className = 'tk' + mi; k.style.top = (p * 100) + '%'; nav.appendChild(k);
+}
+let navP = 0, navT = 0, dragging = false, fovDrag = null;
+const hintOff = () => { hint.style.opacity = 0; };
+const DOTS = STOPS.map((i, k) => {
+  const b = document.createElement('button'), [x, y] = navXY(STOP_P[k]); b.className = 'st'; b.title = CAPS[SEGS[i][4]][1]; b.setAttribute('aria-label', b.title);
+  b.style.left = x + 'px'; b.style.top = y; nav.appendChild(b); b.addEventListener('click', () => { navT = STOP_P[k]; hintOff(); }); return b;
+});
+const nearestStop = p => STOP_P.reduce((b, v) => Math.abs(v - p) < Math.abs(b - p) ? v : b, STOP_P[0]);
+const stepStop = d => { const k = STOP_P.indexOf(nearestStop(navT)); navT = STOP_P[Math.max(0, Math.min(STOP_P.length - 1, k + d))]; hintOff(); };
+const pFromEvent = e => { const r = nav.getBoundingClientRect(); return clamp((e.clientY - r.top) / r.height); };
+// a press on a chapter dot (the marker usually sits on one) still starts a drag; only a press that does not move is a tap on that dot
+let dragFrom = null;
+nav.addEventListener('pointerdown', e => {
+  const k = DOTS.indexOf(e.target); dragFrom = { y: e.clientY, k, moved: false };
+  dragging = true; nav.setPointerCapture(e.pointerId); if (k < 0) navT = pFromEvent(e); hintOff();
+});
+nav.addEventListener('pointermove', e => {
+  if (!dragging || (!dragFrom.moved && Math.abs(e.clientY - dragFrom.y) < 5)) return;
+  dragFrom.moved = true; navT = pFromEvent(e);
+});
+const endDrag = () => { if (dragging) { dragging = false; navT = !dragFrom.moved && dragFrom.k >= 0 ? STOP_P[dragFrom.k] : nearestStop(navT); } };
+nav.addEventListener('pointerup', endDrag); nav.addEventListener('pointercancel', endDrag);
+// touch: a sideways swipe on the picture steps one chapter (left = forward); vertical swipes are left to the page
+let sw = null;
+renderer.domElement.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') sw = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y; sw = null;
+  if (Math.abs(dx) > 40 && Math.abs(dx) > 1.4 * Math.abs(dy)) { stepStop(dx < 0 ? 1 : -1); }
+});
+renderer.domElement.addEventListener('pointercancel', () => { sw = null; });
+// the field-of-view number can be pulled too: down goes forward along the story, up goes back
+const fovBox = document.querySelector('.tr');
+fovBox.addEventListener('pointerdown', e => { fovDrag = { y: e.clientY, p: navP }; fovBox.setPointerCapture(e.pointerId); hintOff(); });
+fovBox.addEventListener('pointermove', e => { if (fovDrag) navT = clamp(fovDrag.p + (e.clientY - fovDrag.y) / nav.getBoundingClientRect().height); });
+const endFov = () => { if (fovDrag) { fovDrag = null; navT = nearestStop(navT); } };
+fovBox.addEventListener('pointerup', endFov); fovBox.addEventListener('pointercancel', endFov);
+// the wheel and the keys step one chapter at a time; the page itself never scrolls
+let wheelAt = 0;
+if (!EMBED) addEventListener('wheel', e => { e.preventDefault(); const now = performance.now(); if (now - wheelAt < 700 || Math.abs(e.deltaY) < 4) return; wheelAt = now; stepStop(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+addEventListener('keydown', e => { if (['ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); stepStop(1); } else if (['ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); stepStop(-1); } });
+// while parked on a chapter its motion repeats: four spikes again and again; the filament forms (SET) and dissolves (RESET)
+// for the video: rest on each chapter while its motion plays, then glide to the next one
+const DWELL = [5, 6, 5, 9.4, 19, 5, 5, 5, 6], GLIDE = 2.6, DEMO_LEN = DWELL.reduce((a, b) => a + b, 0) + GLIDE * (DWELL.length - 1);
+function demoAt(T) { let t = T; for (let k = 0; k < STOPS.length; k++) { if (t < DWELL[k] || k === STOPS.length - 1) return { p: STOP_P[k], loop: t }; t -= DWELL[k]; if (t < GLIDE) return { p: lerp(STOP_P[k], STOP_P[k + 1], ss(t / GLIDE)), loop: null }; t -= GLIDE; } }
+const spikeLoop = t => Math.min(4, (t * .55) % 5.2), setLoop = t => { const x = t % 13; return x < 5.5 ? 4 * x / 5.5 : x < 6.5 ? 4 : x < 12 ? 4 * (1 - (x - 6.5) / 5.5) : 0; };
+const labelBox = document.getElementById('labels'), labPool = [];
+function labelEl(i) { while (labPool.length <= i) { const d = document.createElement('div'); d.className = 'lab'; labelBox.appendChild(d); labPool.push(d); } return labPool[i]; }
+const composer = new THREE.EffectComposer(renderer); composer.addPass(new THREE.RenderPass(scene, camera));
+const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(W, H), 1.2, .5, .5); composer.addPass(bloom);
+// follow the window: canvas, camera, bloom, overlay and point sizes
+function onResize() {
+  W = innerWidth; H = innerHeight; UPX.value = H * PXR / 2; FIT = fitOf(); fitPoints();
+  renderer.setSize(W, H); composer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix();
+  ov.width = Math.round(W * PXR); ov.height = Math.round(H * PXR); O.setTransform(PXR, 0, 0, PXR, 0, 0);
+}
+addEventListener('resize', onResize);
+{ const cr = document.getElementById('credits'); document.getElementById('crb').onclick = () => { cr.hidden = !cr.hidden; }; document.getElementById('crx').onclick = () => { cr.hidden = true; }; }
+if (EMBED) { const a = document.querySelector('.tl a.home'); a.textContent = 'Full screen ↗'; a.href = 'neuromorphic.html'; a.target = '_parent'; }
+const mixHex = (a, b, t) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString();
+let lastCap = '';
+function frameAt(q, tt, loopT = null) {
+  const { i, u } = locate(q), [tk, s0, s1, , cap] = SEGS[i], T = TR[tk], s = lerp(s0, s1, ss(u));
+  LS.spike = i === I_SPK ? (loopT === null ? 4 * u : spikeLoop(loopT)) : i > I_SPK ? 4 : 0;
+  LM.s = i === I_SET ? (loopT === null ? 4 * u : setLoop(loopT)) : i > I_SET ? 4 : 0;
+  T.set && T.set(s);
+  ALL.forEach(l => { if (l.g.parent) scene.remove(l.g); });
+  const o = T.o, inn = T.i; scene.add(o.g); scene.add(inn.g);
+  o.g.position.set(0, 0, 0); o.g.scale.setScalar(1); inn.g.position.set(...T.a); inn.g.scale.setScalar(T.r);
+  o.hide(!T.swap); inn.hide(false);
+  if (T.swap) { fadeGroup(o.g, 1 - seg(s, .12, .42)); fadeGroup(inn.g, seg(s, .55, .85)); }
+  else { const [f0, f1] = s0 > s1 ? [.35, .7] : [.62, .92]; fadeGroup(o.g, 1 - seg(s, f0, f1)); fadeGroup(inn.g, tk === 'PB' ? seg(s, .05, .3) : 1); }   // the outer level steps aside once the inner one fills the screen
+  // camera: the inner level's framing (in outer units) at s = 1, the outer's at s = 0
+  const cv = inn.view, pv = o.view, a = T.a, r = T.r;
+  const ct = [a[0] + r * cv.t[0], a[1] + r * cv.t[1], a[2] + r * cv.t[2]], wt = T.swap ? s : 1 - (1 - s) ** 2;
+  const tg = new THREE.Vector3(lerp(pv.t[0], ct[0], wt), lerp(pv.t[1], ct[1], wt), lerp(pv.t[2], ct[2], wt));
+  const d = FIT * Math.exp(lerp(Math.log(pv.d), Math.log(cv.d * r), s)), az = lerp(pv.az, cv.az, s), el = lerp(pv.el, cv.el, s);
+  camera.position.set(tg.x + d * Math.cos(el) * Math.sin(az), tg.y + d * Math.sin(el), tg.z + d * Math.cos(el) * Math.cos(az));
+  camera.near = d * .01; camera.far = d * 60; camera.lookAt(tg); camera.updateProjectionMatrix();
+  // paper and darkness
+  const dk = T.dark(s); LP.white = 1 - dk;
+  if (EMBED && Math.abs(dk - sentDk) > .004) { sentDk = dk; parent.postMessage({ nm: 'dark', v: dk }, '*'); }
+  scene.background.copy(WHITE).lerp(DARK, dk); scene.fog.color.copy(scene.background); scene.fog.density = dk * .9 / d;
+  bloom.strength = 1.2 * dk; hemi.intensity = lerp(.95, .32, dk); key.intensity = lerp(.85, .95, dk);
+  const rs = document.documentElement.style;
+  rs.setProperty('--bg', mixHex(0xffffff, 0x05070b, dk)); rs.setProperty('--text', mixHex(0x1d1d1d, 0xe8e6ea, dk)); rs.setProperty('--mute', mixHex(0x7a6f6f, 0x8d93a1, dk)); rs.setProperty('--acc', mixHex(0x500000, 0x7fb2ff, dk));
+  INK = [Math.round(lerp(80, 232, dk)), Math.round(lerp(0, 230, dk)), Math.round(lerp(0, 234, dk))]; PAPER = [Math.round(lerp(255, 5, dk)), Math.round(lerp(255, 7, dk)), Math.round(lerp(255, 11, dk))];
+  o.update(tt, T.swap ? 1 : seg(1 - s, .5, .8)); inn.update(tt, 1);
+  if (dk > .5) composer.render(); else renderer.render(scene, camera);
+  // labels of the level that fills the screen
+  let li = 0;
+  const show = (Lv, al, sc, off) => { if (al <= .02) return; for (const [txt, p] of Lv.labels) { const v = new THREE.Vector3(off[0] + sc * p[0], off[1] + sc * p[1], off[2] + sc * p[2]).project(camera); const e = labelEl(li++); e.innerHTML = txt + '<i></i>'; e.style.left = ((v.x + 1) / 2 * W) + 'px'; e.style.top = ((1 - v.y) / 2 * H) + 'px'; e.style.opacity = v.z < 1 ? al : 0; } };
+  show(o, 1 - seg(s, .15, .4), 1, [0, 0, 0]); show(inn, seg(s, .6, .85), r, a);
+  for (let k = li; k < labPool.length; k++) labPool[k].style.opacity = 0;
+  // insets
+  O.clearRect(0, 0, W, H);
+  const io = tk === 'PB' ? seg(s, .55, .85) : tk === 'BN' ? 1 - seg(s, .05, .3) : 0;
+  if (io > .01) {
+    const sp = p3 => { const v = LB.g.localToWorld(new THREE.Vector3(...p3)).project(camera); return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H]; };
+    const P = { eye: sp(LB.io.eye), ear: sp(LB.io.ear), mouth: sp(LB.io.mouth), occ: sp(LB.io.occ), tmp: sp(LB.io.tmp), fro: sp(LB.io.fro) };
+    if (tk === 'PB') { const v = new THREE.Vector3(...LP.faceB).project(camera); P.faceB = [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H]; }
+    drawIO(io, io * (tk === 'BN' ? 1 : seg(s, .7, .9)), tt, P);
+  }
+  const inSM = tk === 'SM', aS = inSM ? (s1 === 0 ? 1 : 1 - seg(s, .3, .6)) : tk === 'NS' ? seg(s, .85, 1) : 0;
+  const aM = inSM ? seg(s, .5, .8) : tk === 'MX' ? (s0 === 1 && s1 === 1 ? 1 : seg(s, .6, .9)) : 0;
+  const aG = Math.max(aS, aM);
+  if (aG > .01) drawGraphs(aS, aG, aM, LS.spike, LM.s);
+  // HUD
+  const f = Math.exp(lerp(Math.log(T.fov[0]), Math.log(T.fov[1]), s));
+  document.getElementById('fov').textContent = fmt(f);
+  const [mx, my] = navXY(pOfQ(q)), kOn = STOPS.indexOf(i); mk.style.left = mx + 'px'; mk.style.top = my; DOTS.forEach((b, k) => b.classList.toggle('on', k === kOn));
+  const ci = Array.isArray(cap) ? (u < cap[2] ? cap[0] : cap[1]) : cap, c = CAPS[ci];
+  if (c[0] !== lastCap) { lastCap = c[0]; document.getElementById('cn').textContent = c[0]; document.getElementById('ct').textContent = c[1]; document.getElementById('cs').textContent = c[2]; }
+}
+
+if (CAP) {
+  hint.style.display = 'none';
+  if (Q.has('demo')) { const T = +Q.get('demo'), d = demoAt(T); document.fonts.ready.then(() => { frameAt(qOfP(d.p), T, d.loop); document.title = 'ready'; }); }
+  else { const q = clamp(+Q.get('q')), tt = q * 140 + +(Q.get('t') || 0); document.fonts.ready.then(() => { frameAt(q, tt); document.title = 'ready'; }); }
+}
+else {
+  const t0 = performance.now(); let last = t0, stopK = -1, tArr = t0;
+  const loop = () => {
+    const now = performance.now(), dt = Math.min(.05, (now - last) / 1000); last = now;
+    if (!RUN) { requestAnimationFrame(loop); return; }
+    navP += (navT - navP) * (1 - Math.exp(-dt * (dragging || fovDrag ? 14 : 4))); if (Math.abs(navT - navP) < 1e-4) navP = navT;
+    const k = STOP_P.findIndex(v => Math.abs(v - navP) < 1e-4); if (k !== stopK) { stopK = k; tArr = now; }
+    const q = qOfP(navP);
+    frameAt(q, (now - t0) / 1000, k >= 0 ? (now - tArr) / 1000 : null);
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+</script>
+</body>
+</html>
