@@ -84,7 +84,7 @@
 </head>
 <body>
 <div id="stage">
-  <div class="hud tl"><a class="home" href="index.html">← Seokjin Oh</a><span class="sep">·</span><span class="long">Neuromorphic · illustrative, not to scale<span class="sep">·</span></span><button class="cr" id="crb">Credits</button></div>
+  <div class="hud tl"><a class="home" href="index.html">← Seokjin Oh</a><span class="sep">·</span><span class="long">Neuromorphic · illustrative, not to scale<span class="sep">·</span></span><button class="cr" id="crb">Credits</button><span class="sep snd-s">·</span><button class="cr" id="snd" aria-pressed="true" title="Music: Smetana, Vltava (Musopen Symphony Orchestra, CC0)">♪ Sound on</button></div>
   <div id="credits" hidden><button id="crx" aria-label="Close">×</button>
   <b>Credits</b>
   <p>Neuron shapes: NeuroMorpho.Org (RRID:SCR_002145), cells 142414 and 142354 (human cortex, layer 2/3, control group), from Warling A. et al. (2020), <i>J. Comp. Neurol.</i> 529(7):1308–1326, doi:10.1002/cne.25022. NeuroMorpho.Org: Tecuatl C., Ljungquist B., Ascoli G. A. (2024), <i>FASEB BioAdvances</i> 6(7):207–221, doi:10.1096/fba.2024-00048. Licensed CC BY 4.0.</p>
@@ -290,7 +290,7 @@ function buildXbar() {
 // one tile = an 8x8 crossbar + its own DACs (left), ADCs (front) and neuron/router block (corner); tiles talk over routing channels
 function buildChipTop() {
   const g = new THREE.Group(), n = 8, TP = .5, TC = [-9.75, -3.25, 3.25, 9.75], DS = 30, AT = 5;   // AT: the tile the single crossbar sits in
-  const die = new THREE.Mesh(new THREE.BoxGeometry(DS, 1.2, DS), new THREE.MeshStandardMaterial({ color: 0x141922, metalness: .55, roughness: .5 })); die.position.y = -.6; g.add(die);
+  const die = new THREE.Mesh(new THREE.BoxGeometry(DS, 1.2, DS), new THREE.MeshStandardMaterial({ color: 0x252d3c, metalness: .5, roughness: .5 })); die.position.y = -.6; g.add(die);
   const tiles = []; for (const tz of TC) for (const tx of TC) tiles.push([tx, tz]);
   const kind = (x, z) => {
     for (const [tx, tz] of tiles) {
@@ -301,7 +301,7 @@ function buildChipTop() {
     return 0;
   };
   const NCM = 9800, cm = inst(BOX, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .35, roughness: .7 }), NCM, g);
-  { const r = rng(7); let c = 0; for (let z = -14.8; z < 14.9 && c < NCM; z += .3) { let x = -14.9; while (x < 14.7 && c < NCM) { const w = .1 + r() * .45, kc = kind(x + w / 2, z), h = kc ? .06 + r() * .2 : .03 + r() * .08; put(cm, c, x + w / 2, h / 2, z, w, h, .22); cm.setColorAt(c, COL.set(kc || 0x1c212b).multiplyScalar(.5 + r() * .35)); c++; x += w + .05; } } cm.count = c; }
+  { const r = rng(7); let c = 0; for (let z = -14.8; z < 14.9 && c < NCM; z += .3) { let x = -14.9; while (x < 14.7 && c < NCM) { const w = .1 + r() * .45, kc = kind(x + w / 2, z), h = kc ? .06 + r() * .2 : .03 + r() * .08; put(cm, c, x + w / 2, h / 2, z, w, h, .22); cm.setColorAt(c, COL.set(kc || 0x2a3242).multiplyScalar(.8 + r() * .45)); c++; x += w + .05; } } cm.count = c; }
   // tile outlines on the CMOS surface
   const fr = [];
   for (const [tx, tz] of tiles) { const a = 3.2, y = .32; fr.push(new THREE.Vector3(tx - a, y, tz - a), new THREE.Vector3(tx + a, y, tz - a), new THREE.Vector3(tx + a, y, tz - a), new THREE.Vector3(tx + a, y, tz + a), new THREE.Vector3(tx + a, y, tz + a), new THREE.Vector3(tx - a, y, tz + a), new THREE.Vector3(tx - a, y, tz + a), new THREE.Vector3(tx - a, y, tz - a)); }
@@ -312,7 +312,8 @@ function buildChipTop() {
   g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(chl), new THREE.LineBasicMaterial({ color: 0x2f6f7a, transparent: true, opacity: .7 })));
   const rt = inst(BOX, std(0x4c1d26), 9, g); { let i = 0; for (const a of CH) for (const b of CH) put(rt, i++, a, .2, b, .7, .4, .7); }
   const NPK = 36, pk = inst(SPH, glow(), NPK, g), CPK = new THREE.Color(0x8fe3ee);
-  const diel = new THREE.Mesh(new THREE.BoxGeometry(26.5, 1.9, 26.5), new THREE.MeshStandardMaterial({ color: 0x6f8fd8, transparent: true, opacity: .035, depthWrite: false })); diel.position.y = .95; g.add(diel);
+  const diel = new THREE.Mesh(new THREE.BoxGeometry(26.5, 1.9, 26.5), new THREE.MeshStandardMaterial({ color: 0x6f8fd8, transparent: true, opacity: .05, depthWrite: false })); diel.position.y = .95; g.add(diel);
+  { const e = new THREE.LineSegments(new THREE.EdgesGeometry(diel.geometry), new THREE.LineBasicMaterial({ color: 0x8fb0f0, transparent: true, opacity: .45 })); e.position.copy(diel.position); g.add(e); }   // the crossbar layer stacked over the CMOS
   const m = metal(), NT = tiles.length;
   const wl = inst(BOX, m, NT * n, g), bl = inst(BOX, m, NT * n, g), cell = inst(BOX, glow(), NT * n * n, g);
   const via = inst(CYL, new THREE.MeshStandardMaterial({ color: 0x4f5866, metalness: .85, roughness: .4 }), NT * n * 2, g);
@@ -332,7 +333,7 @@ function buildChipTop() {
   return {
     g, view: { t: [0, .8, .8], d: 70, az: .72, el: .52 }, anchor: [ax, 2.0, az], r: .5,
     hide(h) { hidden = h; },
-    labels: [['one tile = crossbar + DACs + ADCs + neurons', [ax, 2.8, az - 3.3]], ['routing between tiles', [6.5, .5, 12.5]], ['CMOS die', [-13, .4, -13]]],
+    labels: [['one tile = crossbar + DACs + ADCs + neurons', [ax, 2.8, az - 3.3]], ['3D crossbar layer · stacked over the CMOS (BEOL)', [-13.25, 1.9, 6]], ['routing between tiles', [6.5, .5, 12.5]], ['CMOS die (FEOL)', [-13, .4, -13]]],
     update(tt, vis = 1) {
       tiles.forEach(([tx, tz], t) => {
         const hid = hidden && t === AT, sc = hid ? 0 : 1, v = inputs(tt + t * .7, t * 13, n), sum = new Array(n).fill(0), act = new Float32Array(n * n);
@@ -914,7 +915,7 @@ const CAPS = [
   ['04', 'A synapse', 'Each spike opens Ca²⁺ channels and releases transmitters across a 20 nm gap. Na⁺ flows into the next neuron, Ca²⁺ adds receptors, and the connection grows until that neuron fires.'],
   ['05', 'Same function, different substrate', 'Each voltage pulse drives O²⁻ ions out of the oxide; the vacancies left behind line up into a filament. Conductance rises step by step, like the synapse.'],
   ['06', 'One crossbar', 'Input voltages run along the rows. Each memristor passes a current set by its weight, and every column adds them up: a multiply–accumulate, done where the weights are stored.'],
-  ['07', 'Tiles on CMOS', 'The die is tiled: each tile is a crossbar with its own DACs, ADCs and neurons, stacked on the CMOS below. Inputs climb through vias and currents drop back down, while spikes travel between tiles.'],
+  ['07', 'Tiles on CMOS', 'The die is tiled: each tile is a crossbar with its own DACs, ADCs and neurons, built as a 3D layer in the back-end-of-line, stacked on the CMOS below. Inputs climb through vias and currents drop back down, while spikes travel between tiles.'],
   ['08', 'A 2.5D package', 'Neuromorphic chiplets and memory stacks sit side by side on a silicon interposer (CoWoS-style), wired by dense fine lines. Adding chiplets scales the system out.'],
   ['09', 'A brain made of silicon', 'The second speaker thinks with a lattice of memristors, the chip at its centre.'],
   ['10', 'Two minds, talking', 'One brain made of cells, one made of memristors, in the same conversation.'],
@@ -1111,6 +1112,31 @@ function onResize() {
 addEventListener('resize', onResize);
 { const cr = document.getElementById('credits'); document.getElementById('crb').onclick = () => { cr.hidden = !cr.hidden; }; document.getElementById('crx').onclick = () => { cr.hidden = true; }; }
 if (EMBED) { const a = document.querySelector('.tl a.home'); a.textContent = 'Full screen ↗'; a.href = 'neuromorphic.html'; a.target = '_parent'; }
+// music, full-screen page only (10/29): Smetana, Vltava, Musopen Symphony Orchestra, CC0; a gapless 94 s loop (assets/music_1029/README.md).
+// On by default; browsers start sound only after the visitor's first click, tap or key on the page, so until then the button says so.
+if (EMBED) { document.getElementById('snd').remove(); document.querySelector('.snd-s').remove(); }
+else {
+  const btn = document.getElementById('snd');
+  let on = true, ctx = null, gain = null, src = null, loading = null;
+  const label = () => { btn.setAttribute('aria-pressed', on); btn.textContent = !on ? '♪ Sound off' : ctx && ctx.state === 'running' ? '♪ Sound on' : '♪ Tap for sound'; };
+  function ensure() {
+    if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination); }
+    if (!loading) loading = fetch('audio/vltava.mp3').then(r => r.arrayBuffer()).then(a => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)))
+      .then(b => { src = ctx.createBufferSource(); src.buffer = b; src.loop = true; src.connect(gain); src.start(); sync(); }).catch(() => {});
+  }
+  function sync() {
+    const want = on && !document.hidden;
+    ensure();
+    if (ctx && want && ctx.state !== 'running') ctx.resume().then(label).catch(() => {});
+    if (gain) { const t = ctx.currentTime; gain.gain.cancelScheduledValues(t); gain.gain.setValueAtTime(gain.gain.value, t); gain.gain.linearRampToValueAtTime(want && src ? .8 : 0, t + 1.2); }
+    label();
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); on = !on; sync(); });
+  ['pointerdown', 'keydown', 'touchend'].forEach(t => addEventListener(t, () => { if (on && (!ctx || ctx.state !== 'running')) { ensure(); ctx && ctx.resume().then(sync).catch(() => {}); } }, { capture: true }));
+  document.addEventListener('visibilitychange', sync);
+  sync();
+}
+
 const mixHex = (a, b, t) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString();
 let lastCap = '';
 function frameAt(q, tt, loopT = null) {
