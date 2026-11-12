@@ -169,6 +169,27 @@
   .pub .tg{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.7;margin-top:6px}
   .pub{transition:background-color .3s}
   .pub.cur .ti{color:var(--ink)}
+  /* titles in maroon so they stand out; hover underlines instead of changing color (11/11) */
+  .pub .ti,.pub.cur .ti{color:var(--ink)}
+  a.ti:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+  .pub .ti.mute{color:var(--mute)}
+  /* PC: the publication list uses more of the width (11/11) */
+  #page-pub .col,#page-about .col{max-width:1200px}
+  /* home: entry headlines (school, role) in maroon, the line under them stays grey (11/12) */
+  #page-about .row .t:has(> span){color:var(--ink);font-weight:500}
+  #page-about .row .t span{font-weight:400}
+  #page-about .row .t:has(> span) ul{color:var(--text);font-weight:400}
+  /* phone: year and status go on one line above, the title gets the full width (11/11) */
+  @media (max-width:760px){
+    .pub{flex-wrap:wrap;align-items:center;gap:8px 12px;padding:16px 0}
+    .pub .y{width:auto;order:0;padding-top:0;font-size:12px;display:flex;gap:8px;align-items:baseline}
+    .pub .y span{display:inline;margin-top:0;font-size:11px}
+    .pub .st{order:1;margin-left:auto;font-size:10px;padding:2px 8px}
+    .pub .b{order:2;flex:1 0 100%}
+    .pub .ti{font-size:19px;line-height:1.28;margin-bottom:5px}
+    .pub .au{font-size:13px;line-height:1.45}
+    .pub .ve{font-size:12px}
+  }
   .stack .bx,.stack .ln{stroke:currentColor;stroke-width:1.3;stroke-linejoin:round}.stack .cell{stroke:currentColor;stroke-width:1}.stack .fil{fill:currentColor}.stack .ar{fill:none;stroke:currentColor;stroke-width:2}.stack .sm{font:500 19px 'Inter Tight',sans-serif;fill:currentColor;opacity:.85}.stack .dn{font:600 26px 'Inter Tight',sans-serif;letter-spacing:.06em;fill:currentColor}.stack .gd line{stroke:currentColor;stroke-width:1.2;stroke-dasharray:4 6;opacity:.5}.stack .ld{stroke:currentColor;stroke-width:1;opacity:.7}.stack .wr{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}.stack .ed{stroke:currentColor;stroke-width:1.1;opacity:.55}.stack .nd{fill:#fff;stroke:currentColor;stroke-width:2.2}.stack .sub{font-size:14px}.stack .gl{stroke:currentColor;stroke-width:.8;opacity:.75}.stack .pl{font-family:'Inter Tight',sans-serif;font-weight:600;fill:currentColor}.stack .rg{fill:none;stroke:currentColor;stroke-width:1;opacity:.35}.stack .pb,.stack .pbl{fill:none;stroke:currentColor;stroke-width:2;stroke-dasharray:6 5}.stack .po,.stack .pol{stroke:currentColor;stroke-width:2.6;stroke-linejoin:round}.stack .pad{fill:#fff;stroke:currentColor;stroke-width:1.2}
   .icons a{display:block;color:inherit}
   .icons a:hover svg{stroke:var(--ink)}
